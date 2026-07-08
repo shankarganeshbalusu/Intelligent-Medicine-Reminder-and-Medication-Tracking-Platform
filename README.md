@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # PillSync: Intelligent Medicine Reminder and Medication Tracking Platform
 
 PillSync is a full-stack medication management and compliance tracking web application. It is designed to assist patients in organizing their daily medicine schedules, logging their adherence (taken/missed doses), and enabling caregivers to monitor compliance, stock levels, and refill predictions.
@@ -211,3 +212,6 @@ Make sure you have Node.js (v16+) and Python (v3.9+) installed on your computer.
    npm.cmd run dev
    ```
 3. Open **`http://localhost:5173/`** in your web browser to interact with the platform.
+=======
+# Intelligent Medicine Reminder and Medication Tracking Platform
+>>>>>>> db61f188dc95c5e4039d3d5df6b9c530190120bf
