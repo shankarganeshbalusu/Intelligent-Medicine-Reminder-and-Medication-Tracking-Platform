@@ -28,12 +28,26 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
               </span>
             </Link>
             {user && (
-              <Link
-                to="/dashboard"
-                className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
-              >
-                Dashboard
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link
+                  to="/dashboard"
+                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to="/medicines"
+                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                >
+                  Medicines
+                </Link>
+                <Link
+                  to="/history"
+                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                >
+                  History
+                </Link>
+              </div>
             )}
           </div>
 

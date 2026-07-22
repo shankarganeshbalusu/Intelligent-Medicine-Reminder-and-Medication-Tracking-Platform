@@ -24,8 +24,32 @@ export default function Profile() {
   // Profile update fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [notificationEmail, setNotificationEmail] = useState('');
   const [updatingProfile, setUpdatingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState({ text: '', type: '' });
+
+  // Test email states
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [testEmailMessage, setTestEmailMessage] = useState({ text: '', type: '' });
+
+  const handleSendTestEmail = async () => {
+    if (!notificationEmail) {
+      setTestEmailMessage({ text: 'Please enter a notification email address first.', type: 'error' });
+      return;
+    }
+    
+    setSendingTestEmail(true);
+    setTestEmailMessage({ text: '', type: '' });
+    
+    try {
+      await usersService.sendTestEmail(notificationEmail);
+      setTestEmailMessage({ text: 'Test email sent! Check your inbox or console.', type: 'success' });
+    } catch (err: any) {
+      setTestEmailMessage({ text: err.response?.data?.detail || 'Failed to send test email.', type: 'error' });
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
   
   // Password change fields
   const [currentPassword, setCurrentPassword] = useState('');
@@ -46,6 +70,7 @@ export default function Profile() {
       setProfile(userProfile);
       setName(userProfile.name);
       setEmail(userProfile.email);
+      setNotificationEmail(userProfile.notification_email || '');
       
       const links = await usersService.getAssociations();
       setAssociations(links);
@@ -66,7 +91,7 @@ export default function Profile() {
     setProfileMessage({ text: '', type: '' });
 
     try {
-      const updated = await usersService.updateProfile({ name, email });
+      const updated = await usersService.updateProfile({ name, email, notification_email: notificationEmail });
       setProfile(updated);
       
       // Update local storage so Navbar reflects changes
@@ -228,6 +253,37 @@ export default function Profile() {
                 className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800"
               />
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Notification Alert Email</label>
+              <input
+                type="email"
+                value={notificationEmail}
+                onChange={(e) => setNotificationEmail(e.target.value)}
+                placeholder="Alternative email for medicine alerts (optional)"
+                className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">If blank, alerts will send to your default login email.</p>
+            </div>
+            
+            {notificationEmail && (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 my-2 text-left">
+                <p className="text-xs text-slate-500 font-medium">Want to test if notifications are working on this email?</p>
+                {testEmailMessage.text && (
+                  <p className={`text-xs font-semibold ${testEmailMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                    {testEmailMessage.text}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  disabled={sendingTestEmail}
+                  onClick={handleSendTestEmail}
+                  className="w-full py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-bold rounded-lg border border-brand-200 transition-all flex items-center justify-center gap-1.5"
+                >
+                  {sendingTestEmail ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+                  Send Test Email Alert
+                </button>
+              </div>
+            )}
             <button
               type="submit"
               disabled={updatingProfile}

@@ -4,6 +4,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Dashboard from './pages/Dashboard';
+import Medicines from './pages/Medicines';
+import History from './pages/History';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Navbar from './components/Navbar';
 import { authService } from './services/auth';
 
@@ -46,10 +50,12 @@ function App() {
                 authService.isAuthenticated() ? (
                   <Navigate to="/dashboard" replace />
                 ) : (
-                  <Register />
+                  <Register onLoginSuccess={handleAuthChange} />
                 )
               } 
             />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route 
               path="/dashboard" 
               element={
@@ -63,6 +69,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/medicines" 
+              element={
+                <ProtectedRoute>
+                  <Medicines />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/history" 
+              element={
+                <ProtectedRoute>
+                  <History />
                 </ProtectedRoute>
               } 
             />

@@ -29,9 +29,47 @@ def update_profile(
                     detail="Email already in use"
                 )
             current_user.email = profile_in.email
+    if profile_in.notification_email is not None:
+        current_user.notification_email = profile_in.notification_email
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/send-test-email")
+def send_test_email(req: schemas.TestEmailRequest, db: Session = Depends(get_db)):
+    from app.email_worker import send_email_notification
+    import random
+    
+    quotes = [
+        "Health is wealth.",
+        "To keep the body in good health is a duty. Otherwise, we shall not be able to keep our mind strong and clear. - Buddha",
+        "A healthy outside starts from the inside. - Robert Urich",
+        "He who has health has hope; and he who has hope has everything. - Arabian Proverb",
+        "Your body is a temple, but only if you treat it as one. - Astrid Alauda",
+        "An apple a day keeps the doctor away.",
+        "Health is not valued till sickness comes. - Thomas Fuller",
+        "The first wealth is health. - Ralph Waldo Emerson"
+    ]
+    quote = random.choice(quotes)
+    
+    subject = "test PillSync Connection"
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #0f172a; margin-bottom: 16px;">🔑 PillSync Email Connection Test</h2>
+      <p style="color: #475569; font-size: 14px; line-height: 1.5;">This is a test notification confirming that PillSync successfully verified this email address for scheduled dose alerts.</p>
+      
+      <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+        <span style="display: block; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #3b82f6; margin-bottom: 4px;">Daily Health Quote</span>
+        <p style="color: #334155; font-size: 14px; font-style: italic; margin: 0;">"{quote}"</p>
+      </div>
+      
+      <p style="color: #64748b; font-size: 12px; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 24px;">PillSync Intelligent Medicine Tracker</p>
+    </div>
+    """
+    send_email_notification(req.email, subject, html_body)
+    return {"status": "Test email sent."}
+
 
 
 @router.post("/link-caregiver", response_model=schemas.AssociationResponse)
