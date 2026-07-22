@@ -35,5 +35,10 @@ export const usersService = {
   async respondToAssociation(id: number, statusUpdate: 'active' | 'rejected'): Promise<Association> {
     const response = await api.put<Association>(`/users/associations/${id}?status_update=${statusUpdate}`);
     return response.data;
+  },
+
+  async sendTestEmail(email: string): Promise<any> {
+    const response = await api.post('/users/send-test-email', { email });
+    return response.data;
   }
 };
