@@ -7,7 +7,6 @@ import { authService } from '../services/auth';
 import {
   Activity,
   Pill,
-  TrendingUp,
   Clock,
   Loader2,
   FileText,
@@ -176,22 +175,42 @@ export default function Dashboard() {
         <>
           {/* Stats Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-start gap-4">
-              <div className="p-3 bg-brand-50 rounded-xl text-brand-500">
-                <TrendingUp className="h-6 w-6" />
+            <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 relative overflow-hidden neon-border-cyan hover:scale-[1.02] transition-all duration-300">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-red-50 rounded-xl text-red-500 animate-heartbeat">
+                  <Activity className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Compliance Rate (ECG)</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-extrabold text-slate-800 mt-1 block">{complianceScore}%</span>
+                    <span className={`text-xs font-bold ${
+                      complianceScore >= 85 ? 'text-green-600' : 'text-amber-600'
+                    }`}>
+                      {complianceScore >= 85 ? 'NORMAL RHYTHM' : 'ALERT'}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Compliance Score</span>
-                <span className="text-2xl font-extrabold text-slate-800 mt-1 block">{complianceScore}%</span>
-                <span className={`text-xs font-medium mt-1 block ${
-                  complianceScore >= 85 ? 'text-green-600' : 'text-amber-600'
-                }`}>
-                  {complianceScore >= 85 ? 'Excellent Adherence' : 'Needs Improvement'}
-                </span>
+              
+              {/* Cardiac ECG monitor grid wrapper */}
+              <div className="mt-4 bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-inner relative overflow-hidden h-14 flex items-center">
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.05)_1px,transparent_1px)] bg-[size:10px_10px]" />
+                <svg className="w-full h-10 relative z-10 opacity-90" viewBox="0 0 300 50" preserveAspectRatio="none">
+                  <path
+                    d="M 0,25 L 100,25 L 108,10 L 116,40 L 124,25 L 140,25 L 146,5 L 158,45 L 168,21 L 174,29 L 180,25 L 300,25"
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="animate-ecg"
+                  />
+                </svg>
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-start gap-4">
+            <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 flex items-start gap-4 neon-border-purple hover:scale-[1.02] transition-all duration-300">
               <div className="p-3 bg-brand-50 rounded-xl text-brand-500">
                 <Pill className="h-6 w-6" />
               </div>
@@ -202,7 +221,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-start gap-4">
+            <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 flex items-start gap-4 neon-border-pink hover:scale-[1.02] transition-all duration-300">
               <div className="p-3 bg-brand-50 rounded-xl text-brand-500">
                 <Clock className="h-6 w-6" />
               </div>
@@ -216,7 +235,7 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Checklist Column */}
-            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+            <div className="lg:col-span-2 bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-6 shadow-xl shadow-slate-100/40 space-y-6">
               <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                 <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                   <Clock className="h-5 w-5 text-brand-500" />
@@ -310,7 +329,7 @@ export default function Dashboard() {
 
             {/* Quick stats and link section */}
             <div className="lg:col-span-1 space-y-6">
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
+              <div className="bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-6 shadow-xl shadow-slate-100/40 space-y-5">
                 <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2 border-b border-slate-100 pb-4">
                   <Activity className="h-5 w-5 text-brand-500" />
                   Status Info

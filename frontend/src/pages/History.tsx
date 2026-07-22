@@ -123,7 +123,7 @@ export default function History() {
               </p>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden divide-y divide-slate-100">
+            <div className="bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl shadow-xl shadow-slate-100/40 overflow-hidden divide-y divide-slate-100/40">
               {logs.map((log) => {
                 const isTaken = log.status === 'taken';
                 const logDate = new Date(log.logged_at).toLocaleDateString('en-US', {
