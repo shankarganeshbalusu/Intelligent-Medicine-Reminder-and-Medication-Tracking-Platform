@@ -77,158 +77,213 @@ export default function Register({ onLoginSuccess }: RegisterProps) {
   };
 
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-xl shadow-slate-100 border border-slate-100 p-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-3 bg-brand-50 rounded-2xl text-brand-500 mb-4">
-            <Pill className="h-8 w-8" />
+    <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-center relative animate-fade-in min-h-[500px]">
+      {/* Left Column: Visual Artwork panel */}
+      <div className="hidden md:flex md:col-span-5 flex-col justify-center text-left bg-gradient-to-br from-brand-950 via-brand-900 to-indigo-950 p-8 rounded-3xl border border-brand-800/40 shadow-2xl shadow-brand-500/10 relative overflow-hidden h-full min-h-[520px] animate-glow-purple">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(14,144,233,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(14,144,233,0.03)_1px,transparent_1px)] bg-[size:12px_12px]" />
+        
+        <div className="absolute -top-10 -left-10 w-40 h-40 bg-brand-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl" />
+
+        <div className="relative z-10 space-y-6 flex flex-col justify-between h-full">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-500/20 border border-brand-500/30 text-brand-300 text-xs font-bold uppercase rounded-full tracking-wider">
+              <span className="h-2 w-2 bg-emerald-500 rounded-full animate-glow-green" />
+              PillSync System Active
+            </div>
+            <h1 className="text-3xl font-black text-white leading-tight mt-4">
+              Join the <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-cyan-400 to-indigo-400">PillSync Platform</span>
+            </h1>
+            <p className="text-slate-350 text-xs mt-3 leading-relaxed">
+              Track dose adherence, schedule custom reminders, configure multi-recipient alerts, and synchronize compliance logs dynamically.
+            </p>
           </div>
-          <h2 className="text-2xl font-bold text-slate-800">Create Account</h2>
-          <p className="text-sm text-slate-400 mt-1">Get started with PillSync today</p>
+
+          <div className="flex justify-center py-4">
+            <img
+              src="/src/assets/pillsync_hero_artwork.jpg"
+              alt="PillSync Artwork"
+              className="h-48 w-48 object-cover rounded-2xl shadow-lg border border-purple-700/50 animate-heartbeat bg-slate-800"
+            />
+          </div>
+
+          <div className="text-xs text-purple-300 border-t border-purple-800/40 pt-4 flex items-center justify-between">
+            <span>Powered by Nodemailer</span>
+            <span>v2.1.0 (Google SMTP)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column: Sign Up Form panel */}
+      <div className="md:col-span-7 w-full">
+        {/* Dynamic ECG background */}
+        <div className="absolute -inset-x-20 -top-20 -bottom-10 -z-10 overflow-hidden pointer-events-none opacity-[0.05] flex items-center justify-center">
+          <svg className="w-full h-48" viewBox="0 0 800 200" fill="none">
+            <path
+              d="M 0,100 L 250,100 L 270,60 L 290,140 L 310,100 L 350,100 L 365,20 L 395,180 L 415,90 L 430,110 L 445,100 L 800,100"
+              stroke="#10b981"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="animate-ecg"
+            />
+          </svg>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 text-sm">
-            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-100 rounded-xl flex items-start gap-3 text-green-600 text-sm">
-            <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
-            <span>Account registered successfully! Redirecting you to login...</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Full Name
-            </label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                <User className="h-5 w-5" />
-              </span>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-slate-800 bg-slate-50/50"
-                placeholder="John Doe"
-              />
+        <div className="glass-panel rounded-3xl shadow-2xl shadow-indigo-500/5 p-8 relative overflow-hidden text-slate-950">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center p-3 bg-gradient-to-br from-indigo-50 to-purple-50 border border-purple-100 rounded-2xl text-purple-600 mb-4 relative">
+              <Pill className="h-8 w-8 animate-heartbeat" />
+              <span className="absolute -top-1 -right-1 h-3 w-3 bg-emerald-500 rounded-full border-2 border-white animate-glow-green" />
             </div>
+            <h2 className="text-2xl font-black text-slate-950 tracking-tight">Create Account</h2>
+            <p className="text-sm text-slate-900 font-bold mt-1">Get started with PillSync today</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Email Address
-            </label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                <Mail className="h-5 w-5" />
-              </span>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-slate-800 bg-slate-50/50"
-                placeholder="you@example.com"
-              />
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 text-sm">
+              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
-          </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                <Lock className="h-5 w-5" />
-              </span>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-slate-800 bg-slate-50/50"
-                placeholder="••••••••"
-              />
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-100 rounded-xl flex items-start gap-3 text-green-600 text-sm">
+              <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
+              <span>Account registered successfully! Redirecting you to login...</span>
             </div>
-          </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              I am a...
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setRole('patient')}
-                className={`py-3 px-4 rounded-xl border font-medium text-sm transition-all ${
-                  role === 'patient'
-                    ? 'border-brand-500 bg-brand-50 text-brand-600 shadow-sm'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-500'
-                }`}
-              >
-                Patient
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('caregiver')}
-                className={`py-3 px-4 rounded-xl border font-medium text-sm transition-all ${
-                  role === 'caregiver'
-                    ? 'border-brand-500 bg-brand-50 text-brand-600 shadow-sm'
-                    : 'border-slate-200 hover:bg-slate-50 text-slate-500'
-                }`}
-              >
-                Caregiver
-              </button>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-slate-950 mb-1.5">
+                Full Name
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                  <User className="h-5 w-5" />
+                </span>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-slate-950 font-medium bg-slate-50/50"
+                  placeholder="John Doe"
+                />
+              </div>
             </div>
+
+            <div>
+              <label className="block text-sm font-bold text-slate-950 mb-1.5">
+                Email Address
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                  <Mail className="h-5 w-5" />
+                </span>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-slate-950 font-medium bg-slate-50/50"
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-slate-950 mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                  <Lock className="h-5 w-5" />
+                </span>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-slate-950 font-medium bg-slate-50/50"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-slate-950 mb-1.5">
+                I am a...
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole('patient')}
+                  className={`py-3 px-4 rounded-xl border font-bold text-sm transition-all ${
+                    role === 'patient'
+                      ? 'border-brand-500 bg-brand-50 text-brand-600 shadow-sm'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-600 bg-white/50'
+                  }`}
+                >
+                  Patient
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('caregiver')}
+                  className={`py-3 px-4 rounded-xl border font-bold text-sm transition-all ${
+                    role === 'caregiver'
+                      ? 'border-brand-500 bg-brand-50 text-brand-600 shadow-sm'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-600 bg-white/50'
+                  }`}
+                >
+                  Caregiver
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || success}
+              className="w-full flex items-center justify-center py-3 bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-100 hover:shadow-xl transition-all disabled:opacity-50 disabled:pointer-events-none mt-2"
+            >
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              ) : null}
+              Sign Up
+            </button>
+          </form>
+
+          <div className="relative my-6 text-center">
+            <div className="absolute inset-y-1/2 left-0 right-0 border-t border-slate-200"></div>
+            <span className="relative px-3.5 bg-white text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Or
+            </span>
           </div>
 
           <button
-            type="submit"
-            disabled={loading || success}
-            className="w-full flex items-center justify-center py-3 bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white font-semibold rounded-xl shadow-lg shadow-brand-100 hover:shadow-xl transition-all disabled:opacity-50 disabled:pointer-events-none mt-2"
+            type="button"
+            onClick={() => setShowGoogleModal(true)}
+            className="w-full flex items-center justify-center gap-2.5 py-3 border border-slate-200 hover:bg-slate-50 font-bold rounded-xl text-slate-800 transition-all shadow-sm"
           >
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin mr-2" />
-            ) : null}
-            Sign Up
+            <svg className="h-5 w-5" viewBox="0 0 24 24">
+              <path
+                fill="#EA4335"
+                d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.136 4.2A5.76 5.76 0 0 1 8.16 12.8a5.76 5.76 0 0 1 5.83-5.8 5.68 5.68 0 0 1 3.907 1.543l3.076-3.078A9.87 9.87 0 0 0 13.99 2 9.84 9.84 0 0 0 4 11.84a9.84 9.84 0 0 0 9.99 9.84c5.78 0 9.82-3.99 9.82-9.84 0-.6-.05-1.18-.16-1.74H12.24z"
+              />
+            </svg>
+            Continue with Google
           </button>
-        </form>
 
-        <div className="relative my-6 text-center">
-          <div className="absolute inset-y-1/2 left-0 right-0 border-t border-slate-200"></div>
-          <span className="relative px-3.5 bg-white text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Or
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowGoogleModal(true)}
-          className="w-full flex items-center justify-center gap-2.5 py-3 border border-slate-200 hover:bg-slate-50 font-semibold rounded-xl text-slate-700 transition-all shadow-sm"
-        >
-          <svg className="h-5 w-5" viewBox="0 0 24 24">
-            <path
-              fill="#EA4335"
-              d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.2-5.136 4.2A5.76 5.76 0 0 1 8.16 12.8a5.76 5.76 0 0 1 5.83-5.8 5.68 5.68 0 0 1 3.907 1.543l3.076-3.078A9.87 9.87 0 0 0 13.99 2 9.84 9.84 0 0 0 4 11.84a9.84 9.84 0 0 0 9.99 9.84c5.78 0 9.82-3.99 9.82-9.84 0-.6-.05-1.18-.16-1.74H12.24z"
-            />
-          </svg>
-          Continue with Google
-        </button>
-
-        <div className="text-center mt-6">
-          <p className="text-sm text-slate-400">
-            Already have an account?{' '}
-            <Link to="/login" className="text-brand-500 font-semibold hover:underline">
-              Log in
-            </Link>
-          </p>
+          <div className="text-center mt-6">
+            <p className="text-sm text-slate-950 font-bold">
+              Already have an account?{' '}
+              <Link to="/login" className="text-brand-600 font-extrabold hover:underline">
+                Log in
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
 

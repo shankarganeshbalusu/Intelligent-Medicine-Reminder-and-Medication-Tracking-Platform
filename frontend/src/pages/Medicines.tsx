@@ -258,7 +258,7 @@ export default function Medicines() {
           {/* Left Column: Form to Add/Edit Medicine (Patients Only) */}
           {isPatient && (
             <div className="lg:col-span-1">
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5 sticky top-24">
+              <div className="bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-6 shadow-xl shadow-slate-100/40 space-y-5 sticky top-24">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                   <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                     <Plus className="h-5 w-5 text-brand-500" />
@@ -471,7 +471,7 @@ export default function Medicines() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {medicines.map((med) => (
-                  <div key={med.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between gap-4 hover:border-slate-300 transition-all duration-200">
+                  <div key={med.id} className="bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-5 shadow-xl shadow-slate-100/40 flex flex-col justify-between gap-4 hover:shadow-2xl hover:border-white transition-all duration-200">
                     <div>
                       <div className="flex justify-between items-start">
                         <div className="p-2 bg-brand-50 rounded-xl text-brand-600">
