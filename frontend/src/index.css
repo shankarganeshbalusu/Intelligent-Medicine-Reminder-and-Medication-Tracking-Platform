@@ -10,24 +10,100 @@
 
 /* Custom glassmorphism classes */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
-.glass-panel-dark {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+/* Highly colorful mesh background - Medical Sky Blue Theme */
+.vibrant-mesh-bg {
+  background-color: #f8fafc;
+  background-image: 
+    radial-gradient(at 10% 15%, rgba(14, 144, 233, 0.12) 0px, transparent 55%), /* Brand sky blue */
+    radial-gradient(at 90% 10%, rgba(99, 102, 241, 0.1) 0px, transparent 55%), /* Indigo */
+    radial-gradient(at 50% 85%, rgba(16, 185, 129, 0.08) 0px, transparent 55%), /* Emerald */
+    radial-gradient(at 80% 90%, rgba(6, 182, 212, 0.1) 0px, transparent 55%), /* Cyan */
+    radial-gradient(at 20% 90%, rgba(139, 92, 246, 0.06) 0px, transparent 55%), /* Violet */
+    radial-gradient(at 50% 30%, rgba(14, 144, 233, 0.05) 0px, transparent 50%); /* Amber center soft glow */
+}
+
+/* Softer matching neon border variations */
+.neon-border-cyan {
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  box-shadow: 0 4px 15px rgba(6, 182, 212, 0.04);
+}
+.neon-border-cyan:hover {
+  border-color: rgba(6, 182, 212, 0.6);
+  box-shadow: 0 8px 25px rgba(6, 182, 212, 0.08);
+}
+
+.neon-border-purple {
+  border: 1px solid rgba(14, 144, 233, 0.3); /* Match Brand color */
+  box-shadow: 0 4px 15px rgba(14, 144, 233, 0.04);
+}
+.neon-border-purple:hover {
+  border-color: rgba(14, 144, 233, 0.6);
+  box-shadow: 0 8px 25px rgba(14, 144, 233, 0.08);
+}
+
+.neon-border-pink {
+  border: 1px solid rgba(99, 102, 241, 0.3); /* Match Indigo */
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.04);
+}
+.neon-border-pink:hover {
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.08);
+}
+
+.neon-border-emerald {
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.04);
+}
+.neon-border-emerald:hover {
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.08);
+}
+
+/* Vibrant colorful animations */
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-25px) scale(1.08) rotate(5deg);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 12s infinite ease-in-out;
+}
+
+@keyframes float-delayed {
+  0%, 100% {
+    transform: translateY(0) scale(1.08) rotate(0deg);
+  }
+  50% {
+    transform: translateY(25px) scale(1) rotate(-5deg);
+  }
+}
+
+.animate-float-delayed {
+  animation: float-delayed 15s infinite ease-in-out;
 }
 
 /* Subtle fade in keyframes */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -36,5 +112,63 @@
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Heartbeat Icon pulse animation */
+@keyframes heartbeat {
+  0% { transform: scale(1); }
+  14% { transform: scale(1.15); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.15); }
+  70% { transform: scale(1); }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s infinite ease-in-out;
+}
+
+/* Animated ECG/Heart rate monitor line sweep */
+@keyframes ecg-sweep {
+  0% {
+    stroke-dashoffset: 800;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-ecg {
+  stroke-dasharray: 800;
+  animation: ecg-sweep 2.5s linear infinite;
+}
+
+/* Health status pulse glow indicators */
+@keyframes status-glow-emerald {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.6), 0 0 15px rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.9), 0 0 28px rgba(16, 185, 129, 0.5);
+  }
+}
+
+.animate-glow-green {
+  animation: status-glow-emerald 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse-glow-purple {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.4), 0 0 20px rgba(139, 92, 246, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.8), 0 0 40px rgba(139, 92, 246, 0.3);
+  }
+}
+
+.animate-glow-purple {
+  animation: pulse-glow-purple 2.5s infinite ease-in-out;
+}
+
+
+

@@ -9,6 +9,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
+    notification_email = Column(String, index=True, nullable=True)
     password_hash = Column(String, nullable=False)
     role = Column(String, default="patient")  # patient, caregiver, admin
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -59,6 +60,8 @@ class Medicine(Base):
     times_per_day = Column(Integer, nullable=False)  # frequency
     start_date = Column(DateTime, default=datetime.datetime.utcnow)
     duration_days = Column(Integer, nullable=False)
+    custom_times = Column(String, nullable=True)  # e.g. "08:30,20:00"
+    days_of_week = Column(String, nullable=True, default="Daily")  # e.g. "Monday,Wednesday"
     source = Column(String, default="manual")  # manual, prescription, lookup
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -105,3 +108,13 @@ class DrugReference(Base):
     age_max = Column(Integer, nullable=False)
     medicine_category = Column(String, nullable=False)  # e.g., "Beta-blocker"
     notes = Column(Text, nullable=True)
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, index=True, nullable=False)
+    token = Column(String, unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+

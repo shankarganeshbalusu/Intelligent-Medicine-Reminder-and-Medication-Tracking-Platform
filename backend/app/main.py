@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routes import auth, users
+from app.routes import auth, users, medicines
+from app import email_worker
+import asyncio
 
 # Auto-create SQLite database tables on startup
 Base.metadata.create_all(bind=engine)
@@ -25,7 +27,13 @@ app.add_middleware(
 # Register endpoints routers
 app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
+app.include_router(medicines.router, prefix="/api")
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(email_worker.check_and_send_reminders())
 
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "service": "pillsync-backend"}
+
