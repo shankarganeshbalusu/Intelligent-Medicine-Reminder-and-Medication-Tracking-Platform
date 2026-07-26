@@ -1,5 +1,5 @@
 import api from './api';
-import { UserLoginCredentials, UserRegisterData, AuthResponse } from '../types';
+import { UserLoginCredentials, UserRegisterData, AuthResponse, ResetPasswordData, GoogleAuthData } from '../types';
 
 export const authService = {
   async login(credentials: UserLoginCredentials): Promise<AuthResponse> {
@@ -18,6 +18,29 @@ export const authService = {
 
   async register(data: UserRegisterData): Promise<any> {
     const response = await api.post('/auth/register', data);
+    return response.data;
+  },
+
+  async googleLogin(data: GoogleAuthData): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/auth/google-login', data);
+    const authData = response.data;
+    
+    localStorage.setItem('pillsync_token', authData.access_token);
+    localStorage.setItem('pillsync_user_id', String(authData.user_id));
+    localStorage.setItem('pillsync_user_role', authData.role);
+    localStorage.setItem('pillsync_user_name', authData.name);
+    localStorage.setItem('pillsync_user_email', authData.email);
+    
+    return authData;
+  },
+
+  async forgotPassword(email: string): Promise<any> {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  async resetPassword(data: ResetPasswordData): Promise<any> {
+    const response = await api.post('/auth/reset-password', data);
     return response.data;
   },
 

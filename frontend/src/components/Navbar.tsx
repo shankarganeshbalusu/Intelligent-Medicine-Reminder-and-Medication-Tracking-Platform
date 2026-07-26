@@ -17,23 +17,37 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
   };
 
   return (
-    <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
+    <nav className="bg-white/70 sticky top-0 z-50 backdrop-blur-md border-b border-slate-200/50 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center gap-6">
             <Link to="/" className="flex-shrink-0 flex items-center gap-2">
-              <Pill className="h-6 w-6 text-brand-500 animate-pulse" />
-              <span className="text-xl font-bold tracking-tight text-slate-900 bg-gradient-to-r from-brand-600 to-brand-500 bg-clip-text text-transparent">
+              <Pill className="h-6 w-6 text-brand-500 animate-heartbeat" />
+              <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 PillSync
               </span>
             </Link>
             {user && (
-              <Link
-                to="/dashboard"
-                className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
-              >
-                Dashboard
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link
+                  to="/dashboard"
+                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to="/medicines"
+                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                >
+                  Medicines
+                </Link>
+                <Link
+                  to="/history"
+                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                >
+                  History
+                </Link>
+              </div>
             )}
           </div>
 
