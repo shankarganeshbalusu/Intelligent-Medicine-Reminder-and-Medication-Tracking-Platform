@@ -57,6 +57,7 @@ export interface Medicine {
   id: number;
   user_id: number;
   name: string;
+  generic_name?: string;
   dosage: string;
   quantity: number;
   times_per_day: number;
@@ -65,17 +66,22 @@ export interface Medicine {
   custom_times?: string;
   days_of_week?: string;
   source: string;
+  food_relation?: string;
+  notifications_enabled?: boolean;
   created_at: string;
 }
 
 export interface MedicineCreateData {
   name: string;
+  generic_name?: string;
   dosage: string;
   quantity: number;
   times_per_day: number;
   duration_days: number;
   custom_times?: string;
   days_of_week?: string;
+  food_relation?: string;
+  notifications_enabled?: boolean;
 }
 
 export interface Reminder {
@@ -87,6 +93,7 @@ export interface Reminder {
   created_at: string;
   medicine_name?: string;
   medicine_dosage?: string;
+  medicine_food_relation?: string;
 }
 
 export interface MedicationLog {

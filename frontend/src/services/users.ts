@@ -40,5 +40,11 @@ export const usersService = {
   async sendTestEmail(email: string): Promise<any> {
     const response = await api.post('/users/send-test-email', { email });
     return response.data;
+  },
+
+  async askChatbot(message: string): Promise<{ reply: string }> {
+    const response = await api.post<{ reply: string }>('/users/me/chatbot', { message });
+    return response.data;
   }
 };
+

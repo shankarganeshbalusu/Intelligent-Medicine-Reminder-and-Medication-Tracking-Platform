@@ -8,9 +8,45 @@ from app.database import get_db
 
 router = APIRouter(prefix="/medicines", tags=["medicines"])
 
+import re
+
+def normalize_time_string(t: str) -> str:
+    t = t.strip().upper()
+    
+    # 1. Match format "6:36 PM" or "06:36 PM" or "6:36PM" or "6:36 AM"
+    m = re.match(r'^(\d{1,2}):(\d{2})\s*(AM|PM)?$', t)
+    if m:
+        hr = int(m.group(1))
+        mn = int(m.group(2))
+        ampm = m.group(3)
+        if ampm:
+            if ampm == "PM" and hr < 12:
+                hr += 12
+            elif ampm == "AM" and hr == 12:
+                hr = 0
+        return f"{hr:02d}:{mn:02d}"
+        
+    # 2. Match format "6 PM" or "6PM" or "12 AM"
+    m_hour = re.match(r'^(\d{1,2})\s*(AM|PM)$', t)
+    if m_hour:
+        hr = int(m_hour.group(1))
+        ampm = m_hour.group(2)
+        if ampm == "PM" and hr < 12:
+            hr += 12
+        elif ampm == "AM" and hr == 12:
+            hr = 0
+        return f"{hr:02d}:00"
+        
+    # 3. Match standard "18:36" or "06:36" (already 24 hour or standard input)
+    m_std = re.match(r'^(\d{1,2}):(\d{2})$', t)
+    if m_std:
+        return f"{int(m_std.group(1)):02d}:{int(m_std.group(2)):02d}"
+        
+    return t
+
 def generate_reminders_for_medicine(db: Session, medicine: models.Medicine, start_from_date: datetime.date, end_date: datetime.date):
     if medicine.custom_times:
-        times = [t.strip() for t in medicine.custom_times.split(",") if t.strip()]
+        times = [normalize_time_string(t) for t in medicine.custom_times.split(",") if t.strip()]
     else:
         time_mappings = {
             1: ["09:00"],
@@ -44,15 +80,29 @@ def create_medicine(
     current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db)
 ):
+    from app.ai_service import verify_medicine_with_ai
+    if not verify_medicine_with_ai(medicine_in.name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This medicine '{medicine_in.name}' is unrecognized or fake. Please enter a valid, medically recognized name."
+        )
+
+    normalized_custom_times = None
+    if medicine_in.custom_times:
+        normalized_custom_times = ",".join([normalize_time_string(t) for t in medicine_in.custom_times.split(",") if t.strip()])
+
     db_medicine = models.Medicine(
         user_id=current_user.id,
         name=medicine_in.name,
+        generic_name=medicine_in.generic_name,
         dosage=medicine_in.dosage,
         quantity=medicine_in.quantity,
         times_per_day=medicine_in.times_per_day,
         duration_days=medicine_in.duration_days,
-        custom_times=medicine_in.custom_times,
+        custom_times=normalized_custom_times,
         days_of_week=medicine_in.days_of_week,
+        food_relation=medicine_in.food_relation,
+        notifications_enabled=medicine_in.notifications_enabled,
         source="manual"
     )
     db.add(db_medicine)
@@ -129,7 +179,8 @@ def get_today_reminders(
             "status": r.status,
             "created_at": r.created_at,
             "medicine_name": r.medicine.name,
-            "medicine_dosage": r.medicine.dosage
+            "medicine_dosage": r.medicine.dosage,
+            "medicine_food_relation": r.medicine.food_relation
         })
     return res
 
@@ -250,12 +301,26 @@ def update_medicine(
             detail="You do not have permission to modify this medicine"
         )
 
+    from app.ai_service import verify_medicine_with_ai
+    if not verify_medicine_with_ai(medicine_in.name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This medicine '{medicine_in.name}' is unrecognized or fake. Please enter a valid, medically recognized name."
+        )
+
     medicine.name = medicine_in.name
+    medicine.generic_name = medicine_in.generic_name
     medicine.dosage = medicine_in.dosage
     medicine.quantity = medicine_in.quantity
     medicine.times_per_day = medicine_in.times_per_day
     medicine.duration_days = medicine_in.duration_days
-    medicine.custom_times = medicine_in.custom_times
+    medicine.food_relation = medicine_in.food_relation
+    medicine.notifications_enabled = medicine_in.notifications_enabled
+    
+    normalized_custom_times = None
+    if medicine_in.custom_times:
+        normalized_custom_times = ",".join([normalize_time_string(t) for t in medicine_in.custom_times.split(",") if t.strip()])
+    medicine.custom_times = normalized_custom_times
     medicine.days_of_week = medicine_in.days_of_week
     
     db.query(models.Reminder).filter(
@@ -295,4 +360,37 @@ def delete_medicine(
     db.delete(medicine)
     db.commit()
     return None
+
+from fastapi import UploadFile, File
+
+@router.post("/ocr", response_model=schemas.PrescriptionOCRResponse)
+async def upload_prescription_ocr(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    content = await file.read()
+    from app.ai_service import parse_prescription_ocr
+    parsed_data = parse_prescription_ocr(content, file.filename)
+    return parsed_data
+
+@router.get("/check-interactions", response_model=schemas.InteractionCheckResponse)
+def check_interactions(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    active_meds = db.query(models.Medicine).filter(models.Medicine.user_id == current_user.id).all()
+    med_names = [m.name for m in active_meds]
+    
+    from app.ai_service import check_drug_interactions
+    all_warnings = []
+    
+    for i, med in enumerate(active_meds):
+        others = med_names[:i] + med_names[i+1:]
+        warnings = check_drug_interactions(med.name, others)
+        for w in warnings:
+            if not any(x["warning"] == w["warning"] for x in all_warnings):
+                all_warnings.append(w)
+                
+    return {"warnings": all_warnings}
+
 

@@ -289,3 +289,22 @@ def change_password(
     db.commit()
     return {"status": "password updated successfully"}
 
+@router.post("/me/chatbot", response_model=schemas.ChatBotResponse)
+def chatbot_interaction(
+    req: schemas.ChatBotRequest,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    active_meds = db.query(models.Medicine).filter(models.Medicine.user_id == current_user.id).all()
+    med_names = [m.name for m in active_meds]
+    
+    logs = db.query(models.MedicationLog).filter(models.MedicationLog.user_id == current_user.id).all()
+    taken = sum(1 for l in logs if l.status == "taken")
+    total = len(logs)
+    score = round((taken / total) * 100) if total > 0 else 100
+    
+    from app.ai_service import get_chatbot_response
+    reply = get_chatbot_response(req.message, current_user.name, med_names, score)
+    return {"reply": reply}
+
+
