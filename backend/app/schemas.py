@@ -67,17 +67,20 @@ class PasswordChange(BaseModel):
 
 class MedicineCreate(BaseModel):
     name: str
+    generic_name: Optional[str] = None
     dosage: str
     quantity: int
     times_per_day: int
     duration_days: int
     custom_times: Optional[str] = None
     days_of_week: Optional[str] = "Daily"
+    food_relation: Optional[str] = "No Preference"
 
 
 class MedicineResponse(BaseModel):
     id: int
     name: str
+    generic_name: Optional[str] = None
     dosage: str
     quantity: int
     times_per_day: int
@@ -86,6 +89,7 @@ class MedicineResponse(BaseModel):
     custom_times: Optional[str] = None
     days_of_week: Optional[str] = "Daily"
     source: str
+    food_relation: Optional[str] = "No Preference"
     created_at: datetime.datetime
 
     class Config:
@@ -101,6 +105,7 @@ class ReminderResponse(BaseModel):
     created_at: datetime.datetime
     medicine_name: Optional[str] = None
     medicine_dosage: Optional[str] = None
+    medicine_food_relation: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -139,4 +144,38 @@ class TestEmailRequest(BaseModel):
     email: EmailStr
 
 
+class ChatBotRequest(BaseModel):
+    message: str
 
+class ChatBotResponse(BaseModel):
+    reply: str
+
+class ParsedPrescriptionItem(BaseModel):
+    name: str
+    generic_name: Optional[str] = None
+    dosage: str
+    quantity: int
+    times_per_day: int
+    duration_days: int
+    custom_times: Optional[str] = None
+    days_of_week: Optional[str] = "Daily"
+    food_relation: Optional[str] = "No Preference"
+    confidence: Optional[int] = 95
+    name_confidence: Optional[int] = 98
+    dosage_confidence: Optional[int] = 95
+    frequency_confidence: Optional[int] = 94
+    instructions: Optional[str] = None
+
+class PrescriptionOCRResponse(BaseModel):
+    patient_name: Optional[str] = None
+    diagnosis: Optional[str] = None
+    medicines: List[ParsedPrescriptionItem]
+    is_mock: Optional[bool] = False
+
+class InteractionWarning(BaseModel):
+    medication: str
+    severity: str
+    warning: str
+
+class InteractionCheckResponse(BaseModel):
+    warnings: List[InteractionWarning]

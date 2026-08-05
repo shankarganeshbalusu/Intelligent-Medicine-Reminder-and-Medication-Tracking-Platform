@@ -25,8 +25,14 @@ def send_email_notification(to_email: str, subject: str, html_body: str):
         backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         script_path = os.path.join(backend_dir, "send_email.js")
         
+        # Check if the correct Node.js binary is installed in AppData
+        node_bin = "node"
+        appdata_node = r"C:\Users\MY PC\AppData\Local\nodejs\node.exe"
+        if os.path.exists(appdata_node):
+            node_bin = appdata_node
+            
         result = subprocess.run(
-            ["node", script_path, to_email, subject, html_body],
+            [node_bin, script_path, to_email, subject, html_body],
             capture_output=True,
             text=True,
             cwd=backend_dir,
@@ -90,9 +96,9 @@ async def check_and_send_reminders():
 
             for reminder in due_reminders:
                 patient = reminder.medicine.user
-                recipient = patient.notification_email
+                recipient = patient.notification_email or patient.email
                 if not recipient:
-                    print(f"[EMAIL SENDER] Skipped reminder {reminder.id} for {patient.name} - no custom notification email configured.")
+                    print(f"[EMAIL SENDER] Skipped reminder {reminder.id} for {patient.name} - no notification email configured.")
                     reminder.status = "notified"
                     continue
                 
@@ -116,7 +122,12 @@ async def check_and_send_reminders():
                   <p style="color: #475569; font-size: 14px; line-height: 1.5;">Hello <strong>{patient.name}</strong>,</p>
                   <p style="color: #475569; font-size: 14px; line-height: 1.5;">This is a reminder to take your scheduled dose of <strong>{reminder.medicine.name} ({reminder.medicine.dosage})</strong>.</p>
                   <p style="color: #475569; font-size: 14px; line-height: 1.5;">Scheduled time: <strong>{reminder.dose_time}</strong> today.</p>
-                  <p style="color: #475569; font-size: 14px; line-height: 1.5;">Please log in to your dashboard to confirm taking this medication.</p>
+                  
+                  <p style="margin: 24px 0; text-align: left;">
+                    <a href="http://localhost:5173/medicines" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">Confirm Taking Medication</a>
+                  </p>
+                  
+                  <p style="color: #475569; font-size: 12px; line-height: 1.5;">Or open the link directly: <a href="http://localhost:5173/medicines" style="color: #10b981; text-decoration: underline;">http://localhost:5173/medicines</a></p>
                   
                   <div style="background-color: #f8fafc; border-left: 4px solid #10b981; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
                     <span style="display: block; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #10b981; margin-bottom: 4px;">Motivational Health Quote</span>
@@ -169,19 +180,28 @@ async def check_and_send_reminders():
                         
                         if caregiver_link:
                             caregiver = caregiver_link.caregiver
-                            caregiver_recipient = caregiver.notification_email
+                            caregiver_recipient = caregiver.notification_email or caregiver.email
                             if caregiver_recipient:
                                 caregiver_subject = f"⚠️ Alert: Patient {patient.name} missed a dose"
                                 caregiver_html = f"""
-                                <p>Hello <strong>{caregiver.name}</strong>,</p>
-                                <p>This is an automated alert. Patient <strong>{patient.name}</strong> has missed their scheduled dose of <strong>{r.medicine.name} ({r.medicine.dosage})</strong>.</p>
-                                <p>Scheduled time was: <strong>{r.dose_time}</strong> on <strong>{r.reminder_date.strftime('%Y-%m-%d')}</strong>.</p>
-                                <p>Please check in with the patient to ensure adherence.</p>
-                                <p><em>Thank you,<br>PillSync Tracking Engine</em></p>
+                                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                                  <h2 style="color: #ef4444; margin-bottom: 16px;">⚠️ PillSync Adherence Alert</h2>
+                                  <p style="color: #475569; font-size: 14px; line-height: 1.5;">Hello <strong>{caregiver.name}</strong>,</p>
+                                  <p style="color: #475569; font-size: 14px; line-height: 1.5;">This is an automated alert. Patient <strong>{patient.name}</strong> has missed their scheduled dose of <strong>{r.medicine.name} ({r.medicine.dosage})</strong>.</p>
+                                  <p style="color: #475569; font-size: 14px; line-height: 1.5;">Scheduled time was: <strong>{r.dose_time}</strong> on <strong>{r.reminder_date.strftime('%Y-%m-%d')}</strong>.</p>
+                                  
+                                  <p style="margin: 24px 0; text-align: left;">
+                                    <a href="http://localhost:5173/dashboard" style="background-color: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);">Open Caregiver Dashboard</a>
+                                  </p>
+                                  
+                                  <p style="color: #475569; font-size: 12px; line-height: 1.5;">Or open the link directly: <a href="http://localhost:5173/dashboard" style="color: #ef4444; text-decoration: underline;">http://localhost:5173/dashboard</a></p>
+                                  <p style="color: #475569; font-size: 14px; line-height: 1.5;">Please check in with the patient to ensure adherence.</p>
+                                  <p style="color: #64748b; font-size: 12px; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 24px;">PillSync Tracking Engine</p>
+                                </div>
                                 """
                                 send_email_notification(caregiver_recipient, caregiver_subject, caregiver_html)
                             else:
-                                print(f"[EMAIL SENDER] Skipped caregiver alert for {caregiver.name} - no custom notification email configured.")
+                                print(f"[EMAIL SENDER] Skipped caregiver alert for {caregiver.name} - no notification email configured.")
                 except ValueError:
                     continue # Skip invalid time strings
             

@@ -37,5 +37,22 @@ export const medicinesService = {
     const url = patientId ? `/medicines/medication-logs?patient_id=${patientId}` : '/medicines/medication-logs';
     const response = await api.get<MedicationLog[]>(url);
     return response.data;
+  },
+
+  async uploadPrescriptionOCR(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/medicines/ocr', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  },
+
+  async checkDrugInteractions(): Promise<{ warnings: Array<{ medication: string; severity: string; warning: string }> }> {
+    const response = await api.get('/medicines/check-interactions');
+    return response.data;
   }
 };
+

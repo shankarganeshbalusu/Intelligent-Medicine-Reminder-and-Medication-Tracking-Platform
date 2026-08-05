@@ -24,6 +24,7 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
     new_user = models.User(
         name=user_in.name,
         email=user_in.email,
+        notification_email=user_in.email,
         password_hash=hashed_password,
         role=user_in.role
     )
@@ -74,6 +75,7 @@ def google_login(req: schemas.GoogleAuthRequest, db: Session = Depends(get_db)):
         user = models.User(
             name=req.name,
             email=req.email,
+            notification_email=req.email,
             password_hash=hashed_password,
             role=req.role
         )

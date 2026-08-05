@@ -55,6 +55,7 @@ class Medicine(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String, nullable=False)
+    generic_name = Column(String, nullable=True)
     dosage = Column(String, nullable=False)  # e.g., "500mg" or "1 tablet"
     quantity = Column(Integer, nullable=False)  # total quantity of medicine, e.g. 60 pills
     times_per_day = Column(Integer, nullable=False)  # frequency
@@ -63,6 +64,7 @@ class Medicine(Base):
     custom_times = Column(String, nullable=True)  # e.g. "08:30,20:00"
     days_of_week = Column(String, nullable=True, default="Daily")  # e.g. "Monday,Wednesday"
     source = Column(String, default="manual")  # manual, prescription, lookup
+    food_relation = Column(String, default="No Preference")  # "Before Food", "After Food", "No Preference"
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     # Relationships

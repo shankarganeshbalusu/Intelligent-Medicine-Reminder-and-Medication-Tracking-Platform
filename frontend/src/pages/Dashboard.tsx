@@ -13,8 +13,24 @@ import {
   Check,
   X,
   ListFilter,
-  Plus
+  Plus,
+  AlertCircle
 } from 'lucide-react';
+
+const formatTimeToShow = (timeStr: string) => {
+  if (!timeStr) return '';
+  if (timeStr.toUpperCase().includes('AM') || timeStr.toUpperCase().includes('PM')) {
+    return timeStr;
+  }
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  const h = parseInt(parts[0], 10);
+  const m = parts[1];
+  if (isNaN(h)) return timeStr;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const displayHours = h % 12 || 12;
+  return `${displayHours}:${m} ${ampm}`;
+};
 
 export default function Dashboard() {
   const currentUser = authService.getCurrentUser();
@@ -28,6 +44,8 @@ export default function Dashboard() {
   // Stats & Schedule data
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [warnings, setWarnings] = useState<Array<{ medication: string; severity: string; warning: string }>>([]);
+  
   const [logs, setLogs] = useState<MedicationLog[]>([]);
   const [complianceScore, setComplianceScore] = useState(100);
   const [loading, setLoading] = useState(true);
@@ -54,10 +72,19 @@ export default function Dashboard() {
       const historyLogs = await medicinesService.getMedicationLogs(uid);
       setLogs(historyLogs);
       calculateCompliance(historyLogs);
+
+      if (isPatient) {
+        const interactionData = await medicinesService.checkDrugInteractions();
+        setWarnings(interactionData.warnings || []);
+      } else {
+        setWarnings([]);
+      }
     } catch (err) {
       console.error('Failed to fetch patient data', err);
     }
   };
+
+
 
   const loadDashboardData = async () => {
     try {
@@ -173,6 +200,25 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
+          {/* Drug Interaction Warning Banners */}
+          {isPatient && warnings.length > 0 && (
+            <div className="space-y-3.5 mb-6">
+              {warnings.map((w, idx) => (
+                <div key={idx} className="p-4 bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-2xl flex items-start gap-3.5 text-red-950 shadow-sm animate-pulse-slow">
+                  <div className="p-1.5 bg-red-100 rounded-lg text-red-600">
+                    <AlertCircle className="h-5 w-5 shrink-0" />
+                  </div>
+                  <div>
+                    <h5 className="font-extrabold text-sm text-red-950 flex items-center gap-1.5">
+                      Clinical Warning: Drug Interaction Found ({w.severity} Severity)
+                    </h5>
+                    <p className="text-xs text-red-900 mt-1 leading-relaxed font-semibold">{w.warning}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Stats Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 relative overflow-hidden neon-border-cyan hover:scale-[1.02] transition-all duration-300">
@@ -270,10 +316,23 @@ export default function Dashboard() {
                               ? 'bg-red-50 text-red-600'
                               : 'bg-brand-50 text-brand-600'
                           }`}>
-                            {rem.dose_time}
+                            {formatTimeToShow(rem.dose_time)}
                           </div>
                           <div>
-                            <h5 className="font-bold text-slate-800 text-sm">{rem.medicine_name}</h5>
+                            <h5 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                              {rem.medicine_name}
+                              {rem.medicine_food_relation && (
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                                  rem.medicine_food_relation.toLowerCase().includes('before')
+                                    ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                                    : rem.medicine_food_relation.toLowerCase().includes('night')
+                                    ? 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                                    : 'bg-green-50 text-green-600 border border-green-100'
+                                }`}>
+                                  {rem.medicine_food_relation}
+                                </span>
+                              )}
+                            </h5>
                             <p className="text-xs text-slate-400">Dosage: {rem.medicine_dosage}</p>
                           </div>
                         </div>
@@ -345,13 +404,6 @@ export default function Dashboard() {
                   <div className="flex justify-between">
                     <span>Adherence Logs</span>
                     <span className="font-semibold text-slate-800">{logs.length} logged</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Milestone Status</span>
-                    <span className="text-green-600 font-semibold flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                      Milestone 2 Active
-                    </span>
                   </div>
                 </div>
 
