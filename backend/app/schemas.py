@@ -75,6 +75,7 @@ class MedicineCreate(BaseModel):
     custom_times: Optional[str] = None
     days_of_week: Optional[str] = "Daily"
     food_relation: Optional[str] = "No Preference"
+    notifications_enabled: Optional[bool] = True
 
 
 class MedicineResponse(BaseModel):
@@ -90,6 +91,7 @@ class MedicineResponse(BaseModel):
     days_of_week: Optional[str] = "Daily"
     source: str
     food_relation: Optional[str] = "No Preference"
+    notifications_enabled: bool
     created_at: datetime.datetime
 
     class Config:

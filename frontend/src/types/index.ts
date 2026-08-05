@@ -67,6 +67,7 @@ export interface Medicine {
   days_of_week?: string;
   source: string;
   food_relation?: string;
+  notifications_enabled?: boolean;
   created_at: string;
 }
 
@@ -80,6 +81,7 @@ export interface MedicineCreateData {
   custom_times?: string;
   days_of_week?: string;
   food_relation?: string;
+  notifications_enabled?: boolean;
 }
 
 export interface Reminder {

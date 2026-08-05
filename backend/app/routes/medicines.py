@@ -102,6 +102,7 @@ def create_medicine(
         custom_times=normalized_custom_times,
         days_of_week=medicine_in.days_of_week,
         food_relation=medicine_in.food_relation,
+        notifications_enabled=medicine_in.notifications_enabled,
         source="manual"
     )
     db.add(db_medicine)
@@ -314,6 +315,7 @@ def update_medicine(
     medicine.times_per_day = medicine_in.times_per_day
     medicine.duration_days = medicine_in.duration_days
     medicine.food_relation = medicine_in.food_relation
+    medicine.notifications_enabled = medicine_in.notifications_enabled
     
     normalized_custom_times = None
     if medicine_in.custom_times:

@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -65,6 +65,7 @@ class Medicine(Base):
     days_of_week = Column(String, nullable=True, default="Daily")  # e.g. "Monday,Wednesday"
     source = Column(String, default="manual")  # manual, prescription, lookup
     food_relation = Column(String, default="No Preference")  # "Before Food", "After Food", "No Preference"
+    notifications_enabled = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     # Relationships

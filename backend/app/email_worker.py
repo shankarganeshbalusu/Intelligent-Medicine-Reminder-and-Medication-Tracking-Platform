@@ -91,7 +91,8 @@ async def check_and_send_reminders():
             due_reminders = db.query(models.Reminder).join(models.Medicine).filter(
                 models.Reminder.reminder_date == today_date,
                 models.Reminder.dose_time == current_time_str,
-                models.Reminder.status == "pending"
+                models.Reminder.status == "pending",
+                models.Medicine.notifications_enabled == True
             ).all()
 
             for reminder in due_reminders:
@@ -178,7 +179,7 @@ async def check_and_send_reminders():
                             models.PatientCaregiver.status == "active"
                         ).first()
                         
-                        if caregiver_link:
+                        if r.medicine.notifications_enabled and caregiver_link:
                             caregiver = caregiver_link.caregiver
                             caregiver_recipient = caregiver.notification_email or caregiver.email
                             if caregiver_recipient:
