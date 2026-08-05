@@ -15,7 +15,9 @@ import {
   Edit3,
   Trash2,
   X,
-  FileText
+  FileText,
+  Bell,
+  BellOff
 } from 'lucide-react';
 
 const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -226,6 +228,28 @@ export default function Medicines() {
     setFoodRelation('No Preference');
     setNotificationsEnabled(true);
     setFormMessage({ text: '', type: '' });
+  };
+
+  const toggleNotifications = async (med: Medicine) => {
+    try {
+      const updatedPayload = {
+        name: med.name,
+        generic_name: med.generic_name,
+        dosage: med.dosage,
+        quantity: med.quantity,
+        times_per_day: med.times_per_day,
+        duration_days: med.duration_days,
+        custom_times: med.custom_times || '',
+        days_of_week: med.days_of_week || 'Daily',
+        food_relation: med.food_relation || 'No Preference',
+        notifications_enabled: !(med.notifications_enabled !== false)
+      };
+      await medicinesService.updateMedicine(med.id, updatedPayload);
+      const list = await medicinesService.getMedicines();
+      setMedicines(list);
+    } catch (err) {
+      console.error('Failed to toggle notifications', err);
+    }
   };
 
   const handleAddMedicine = async (e: React.FormEvent) => {
@@ -650,28 +674,23 @@ export default function Medicines() {
                       <h4 className="text-base font-bold text-slate-800 mt-3">{med.name}</h4>
                       <p className="text-slate-400 text-xs mt-0.5">Strength: {med.dosage}</p>
                       
-                      <div className="flex items-center gap-2 mt-2">
+                      {/* Food Relation Warning - Extremely Prominent for mothers/caregivers to read */}
+                      <div className="mt-3 flex items-center gap-2 text-xs font-bold bg-slate-50 border border-slate-100 p-2.5 rounded-xl text-slate-700">
+                        <span className="text-sm">🍽️</span>
+                        <span>Intake Advice:</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
                           med.food_relation?.toLowerCase().includes('before')
-                            ? 'bg-amber-50 text-amber-600 border border-amber-100'
-                            : med.food_relation?.toLowerCase().includes('night')
-                            ? 'bg-indigo-50 text-indigo-600 border border-indigo-100'
-                            : 'bg-green-50 text-green-600 border border-green-100'
+                            ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                            : med.food_relation?.toLowerCase().includes('after')
+                            ? 'bg-green-100 text-green-700 border border-green-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}>
                           {med.food_relation || 'No Preference'}
-                        </span>
-                        
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                          med.notifications_enabled !== false
-                            ? 'bg-sky-50 text-sky-600 border border-sky-100'
-                            : 'bg-slate-100 text-slate-500 border border-slate-200'
-                        }`}>
-                          {med.notifications_enabled !== false ? '🔔 Alerts On' : '🔕 Alerts Off'}
                         </span>
                       </div>
                       
                       {med.days_of_week && med.days_of_week !== 'Daily' && (
-                        <p className="text-brand-600 text-[10px] font-bold mt-2 uppercase tracking-wider">
+                        <p className="text-brand-600 text-[10px] font-bold mt-2.5 uppercase tracking-wider">
                           Days: {med.days_of_week.split(',').map(d => d.substring(0,3)).join(', ')}
                         </p>
                       )}
@@ -691,6 +710,26 @@ export default function Medicines() {
                         {med.days_of_week && med.days_of_week !== 'Daily' ? 'Weekly' : 'Daily'} ({med.times_per_day}x)
                       </div>
                     </div>
+
+                    {isPatient && (
+                      <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+                          {med.notifications_enabled !== false ? <Bell className="h-3 w-3 text-sky-500" /> : <BellOff className="h-3 w-3 text-slate-400" />}
+                          Email Alerts:
+                        </span>
+                        <button
+                          onClick={() => toggleNotifications(med)}
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                            med.notifications_enabled !== false
+                              ? 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'
+                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                          }`}
+                          title={med.notifications_enabled !== false ? "Click to disable notifications" : "Click to enable notifications"}
+                        >
+                          <span>{med.notifications_enabled !== false ? 'Enabled (ON)' : 'Disabled (OFF)'}</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
