@@ -1,13 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Pill, LogOut, User as UserIcon } from 'lucide-react';
+import { Pill, LogOut, User as UserIcon, Sparkles } from 'lucide-react';
 import { authService } from '../services/auth';
 
 interface NavbarProps {
   user: any;
   onLogout: () => void;
+  onAskAI?: () => void;
 }
 
-export default function Navbar({ user, onLogout }: NavbarProps) {
+export default function Navbar({ user, onLogout, onAskAI }: NavbarProps) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -42,11 +43,26 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                   Medicines
                 </Link>
                 <Link
+                  to="/prescription-ocr"
+                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                >
+                  Prescription OCR
+                </Link>
+                <Link
                   to="/history"
                   className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
                 >
                   History
                 </Link>
+                {user?.role === 'patient' && onAskAI && (
+                  <button
+                    onClick={onAskAI}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 active:scale-95 text-white text-xs font-bold rounded-full shadow-md shadow-brand-100/30 hover:shadow-lg transition-all"
+                  >
+                    <Sparkles className="h-3 w-3 text-yellow-300 animate-pulse" />
+                    <span>Ask AI</span>
+                  </button>
+                )}
               </div>
             )}
           </div>

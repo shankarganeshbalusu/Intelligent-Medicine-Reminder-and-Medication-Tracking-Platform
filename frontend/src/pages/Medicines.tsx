@@ -14,10 +14,28 @@ import {
   Users,
   Edit3,
   Trash2,
-  X
+  X,
+  FileText,
+  Bell,
+  BellOff
 } from 'lucide-react';
 
 const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const formatTimeToShow = (timeStr: string) => {
+  if (!timeStr) return '';
+  if (timeStr.toUpperCase().includes('AM') || timeStr.toUpperCase().includes('PM')) {
+    return timeStr;
+  }
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  const h = parseInt(parts[0], 10);
+  const m = parts[1];
+  if (isNaN(h)) return timeStr;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const displayHours = h % 12 || 12;
+  return `${displayHours}:${m} ${ampm}`;
+};
 
 export default function Medicines() {
   const user = authService.getCurrentUser();
@@ -31,6 +49,7 @@ export default function Medicines() {
   // Edit states
   const [isEditing, setIsEditing] = useState(false);
   const [editMedicineId, setEditMedicineId] = useState<number | null>(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
 
   // Form states (Patients only)
   const [name, setName] = useState('');
@@ -42,7 +61,9 @@ export default function Medicines() {
   const [scheduleType, setScheduleType] = useState<'Daily' | 'Specific Days'>('Daily');
   const [selectedDays, setSelectedDays] = useState<string[]>(weekdays);
   const [submitting, setSubmitting] = useState(false);
+  const [foodRelation, setFoodRelation] = useState('No Preference');
   const [formMessage, setFormMessage] = useState({ text: '', type: '' });
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const loadData = async () => {
     try {
@@ -86,18 +107,57 @@ export default function Medicines() {
     }
   };
 
-  const handleTimesPerDayChange = (count: number) => {
-    setTimesPerDay(count);
-    const defaults = ['09:00', '21:00', '14:00', '18:00'];
-    const newTimes = [...customTimes];
-    if (newTimes.length < count) {
-      for (let i = newTimes.length; i < count; i++) {
-        newTimes.push(defaults[i] || '09:00');
+  const handleTimesPerDayChange = (val: number) => {
+    setTimesPerDay(val);
+    // Auto populate custom times depending on the times per day
+    const defaults: { [key: number]: string[] } = {
+      1: ['09:00'],
+      2: ['09:00', '21:00'],
+      3: ['09:00', '14:00', '21:00'],
+      4: ['09:00', '13:00', '18:00', '22:00']
+    };
+    setCustomTimes(defaults[val] || ['09:00']);
+  };
+
+  const handlePrescriptionOCRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setOcrLoading(true);
+    setFormMessage({ text: '', type: '' });
+    try {
+      const data = await medicinesService.uploadPrescriptionOCR(file);
+      const firstMed = data.medicines?.[0];
+      if (!firstMed) throw new Error("No medicines found in the scanned prescription.");
+
+      setName(firstMed.name || '');
+      setDosage(firstMed.dosage || '');
+      setQuantity((firstMed.quantity || '').toString());
+      setTimesPerDay(firstMed.times_per_day || 1);
+      setDurationDays((firstMed.duration_days || '').toString());
+      setFoodRelation(firstMed.food_relation || 'No Preference');
+      if (firstMed.custom_times) {
+        setCustomTimes(firstMed.custom_times.split(','));
       }
-    } else if (newTimes.length > count) {
-      newTimes.splice(count);
+      if (firstMed.days_of_week && firstMed.days_of_week !== 'Daily') {
+        setScheduleType('Specific Days');
+        setSelectedDays(firstMed.days_of_week.split(','));
+      } else {
+        setScheduleType('Daily');
+        setSelectedDays(weekdays);
+      }
+      setFormMessage({
+        text: `AI parsed successfully! Prefilled form with '${firstMed.name}'. You can scan and import all medicines at once on the dedicated Prescription OCR page.`,
+        type: 'success'
+      });
+    } catch (err: any) {
+      setFormMessage({
+        text: err.response?.data?.detail || 'Failed to process prescription with AI. Please fill manually.',
+        type: 'error'
+      });
+    } finally {
+      setOcrLoading(false);
+      e.target.value = '';
     }
-    setCustomTimes(newTimes);
   };
 
   const handleTimeChange = (idx: number, val: string) => {
@@ -135,6 +195,7 @@ export default function Medicines() {
     setDosage(med.dosage);
     setQuantity(med.quantity.toString());
     setTimesPerDay(med.times_per_day);
+    setFoodRelation(med.food_relation || 'No Preference');
     if (med.custom_times) {
       setCustomTimes(med.custom_times.split(','));
     } else {
@@ -149,6 +210,7 @@ export default function Medicines() {
       setScheduleType('Daily');
       setSelectedDays(weekdays);
     }
+    setNotificationsEnabled(med.notifications_enabled !== false);
     setFormMessage({ text: '', type: '' });
   };
 
@@ -163,7 +225,31 @@ export default function Medicines() {
     setDurationDays('');
     setScheduleType('Daily');
     setSelectedDays(weekdays);
+    setFoodRelation('No Preference');
+    setNotificationsEnabled(true);
     setFormMessage({ text: '', type: '' });
+  };
+
+  const toggleNotifications = async (med: Medicine) => {
+    try {
+      const updatedPayload = {
+        name: med.name,
+        generic_name: med.generic_name,
+        dosage: med.dosage,
+        quantity: med.quantity,
+        times_per_day: med.times_per_day,
+        duration_days: med.duration_days,
+        custom_times: med.custom_times || '',
+        days_of_week: med.days_of_week || 'Daily',
+        food_relation: med.food_relation || 'No Preference',
+        notifications_enabled: !(med.notifications_enabled !== false)
+      };
+      await medicinesService.updateMedicine(med.id, updatedPayload);
+      const list = await medicinesService.getMedicines();
+      setMedicines(list);
+    } catch (err) {
+      console.error('Failed to toggle notifications', err);
+    }
   };
 
   const handleAddMedicine = async (e: React.FormEvent) => {
@@ -172,6 +258,17 @@ export default function Medicines() {
     setSubmitting(true);
     setFormMessage({ text: '', type: '' });
 
+    // Validate duplicate custom times
+    const uniqueTimes = new Set(customTimes.map(t => t.trim()));
+    if (uniqueTimes.size !== customTimes.length) {
+      setFormMessage({
+        text: 'Duplicate dose timings are not allowed. Please set a different time for each dose.',
+        type: 'error'
+      });
+      setSubmitting(false);
+      return;
+    }
+
     const payload = {
       name,
       dosage,
@@ -179,7 +276,9 @@ export default function Medicines() {
       times_per_day: timesPerDay,
       duration_days: parseInt(durationDays),
       custom_times: customTimes.join(','),
-      days_of_week: scheduleType === 'Daily' ? 'Daily' : selectedDays.join(',')
+      days_of_week: scheduleType === 'Daily' ? 'Daily' : selectedDays.join(','),
+      food_relation: foodRelation,
+      notifications_enabled: notificationsEnabled
     };
 
     try {
@@ -199,6 +298,8 @@ export default function Medicines() {
         setDurationDays('');
         setScheduleType('Daily');
         setSelectedDays(weekdays);
+        setFoodRelation('No Preference');
+        setNotificationsEnabled(true);
       }
 
       const list = await medicinesService.getMedicines();
@@ -290,6 +391,39 @@ export default function Medicines() {
                   </div>
                 )}
 
+                {/* AI Prescription Upload scanner */}
+                {isPatient && !isEditing && (
+                  <div className="mb-4 bg-gradient-to-r from-brand-50 to-indigo-50 border border-brand-100 rounded-2xl p-4 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-inner mt-4">
+                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-brand-500/5 font-black text-6xl pointer-events-none select-none">AI OCR</span>
+                    <FileText className="h-8 w-8 text-brand-500 mb-2 animate-pulse" />
+                    <h4 className="text-xs font-bold text-slate-800">Scan Prescription with AI</h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5 mb-3 max-w-[240px]">
+                      Upload your prescription file or photo. Our AI will automatically extract details and fill out the form!
+                    </p>
+                    
+                    <label className="relative cursor-pointer py-2 px-4 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-brand-100/50 flex items-center gap-1.5 cursor-pointer">
+                      {ocrLoading ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <span>AI is parsing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-3.5 w-3.5" />
+                          <span>Select Image / PDF</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        disabled={ocrLoading}
+                        onChange={handlePrescriptionOCRUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+
                 <form onSubmit={handleAddMedicine} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Medicine Name</label>
@@ -301,6 +435,19 @@ export default function Medicines() {
                       onChange={(e) => setName(e.target.value)}
                       className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800"
                     />
+                  </div>
+
+                  <div className="flex items-center gap-2 px-0.5 py-1">
+                    <input
+                      type="checkbox"
+                      id="notifications_enabled"
+                      checked={notificationsEnabled}
+                      onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    />
+                    <label htmlFor="notifications_enabled" className="text-xs font-medium text-slate-700 select-none cursor-pointer">
+                      Enable Email Notifications for this medicine
+                    </label>
                   </div>
 
                   <div>
@@ -404,6 +551,20 @@ export default function Medicines() {
                       <option value={2}>2 times daily</option>
                       <option value={3}>3 times daily</option>
                       <option value={4}>4 times daily</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Food Relation</label>
+                    <select
+                      value={foodRelation}
+                      onChange={(e) => setFoodRelation(e.target.value)}
+                      className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-750"
+                    >
+                      <option value="No Preference">No Preference</option>
+                      <option value="Before Food">Before Food</option>
+                      <option value="After Food">After Food</option>
+                      <option value="At Night">At Night</option>
                     </select>
 
                     <div className="mt-3 bg-slate-50 p-3.5 rounded-xl border border-slate-150 space-y-2">
@@ -513,14 +674,29 @@ export default function Medicines() {
                       <h4 className="text-base font-bold text-slate-800 mt-3">{med.name}</h4>
                       <p className="text-slate-400 text-xs mt-0.5">Strength: {med.dosage}</p>
                       
+                      {/* Food Relation Warning - Extremely Prominent for mothers/caregivers to read */}
+                      <div className="mt-3 flex items-center gap-2 text-xs font-bold bg-slate-50 border border-slate-100 p-2.5 rounded-xl text-slate-700">
+                        <span className="text-sm">🍽️</span>
+                        <span>Intake Advice:</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                          med.food_relation?.toLowerCase().includes('before')
+                            ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                            : med.food_relation?.toLowerCase().includes('after')
+                            ? 'bg-green-100 text-green-700 border border-green-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        }`}>
+                          {med.food_relation || 'No Preference'}
+                        </span>
+                      </div>
+                      
                       {med.days_of_week && med.days_of_week !== 'Daily' && (
-                        <p className="text-brand-600 text-[10px] font-bold mt-2 uppercase tracking-wider">
+                        <p className="text-brand-600 text-[10px] font-bold mt-2.5 uppercase tracking-wider">
                           Days: {med.days_of_week.split(',').map(d => d.substring(0,3)).join(', ')}
                         </p>
                       )}
                       {med.custom_times && (
                         <p className="text-slate-500 text-[10px] font-semibold mt-1">
-                          Timings: {med.custom_times.split(',').join(', ')}
+                          Timings: {med.custom_times.split(',').map(formatTimeToShow).join(', ')}
                         </p>
                       )}
                     </div>
@@ -534,6 +710,26 @@ export default function Medicines() {
                         {med.days_of_week && med.days_of_week !== 'Daily' ? 'Weekly' : 'Daily'} ({med.times_per_day}x)
                       </div>
                     </div>
+
+                    {isPatient && (
+                      <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+                          {med.notifications_enabled !== false ? <Bell className="h-3 w-3 text-sky-500" /> : <BellOff className="h-3 w-3 text-slate-400" />}
+                          Email Alerts:
+                        </span>
+                        <button
+                          onClick={() => toggleNotifications(med)}
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                            med.notifications_enabled !== false
+                              ? 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'
+                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                          }`}
+                          title={med.notifications_enabled !== false ? "Click to disable notifications" : "Click to enable notifications"}
+                        >
+                          <span>{med.notifications_enabled !== false ? 'Enabled (ON)' : 'Disabled (OFF)'}</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
