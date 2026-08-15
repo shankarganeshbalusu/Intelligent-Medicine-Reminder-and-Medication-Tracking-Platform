@@ -31,15 +31,23 @@ def update_profile(
             current_user.email = profile_in.email
     if profile_in.notification_email is not None:
         current_user.notification_email = profile_in.notification_email
+    if profile_in.role is not None and profile_in.role in ["patient", "caregiver"]:
+        current_user.role = profile_in.role
     db.commit()
     db.refresh(current_user)
     return current_user
 
 
 @router.post("/send-test-email")
-def send_test_email(req: schemas.TestEmailRequest, db: Session = Depends(get_db)):
+def send_test_email(
+    req: schemas.TestEmailRequest,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
     from app.email_worker import send_email_notification
     import random
+    
+    target_email = req.email.strip().lower() if req.email else current_user.email.strip().lower()
     
     quotes = [
         "Health is wealth.",
@@ -53,22 +61,27 @@ def send_test_email(req: schemas.TestEmailRequest, db: Session = Depends(get_db)
     ]
     quote = random.choice(quotes)
     
-    subject = "test PillSync Connection"
+    subject = f"🔔 PillSync Live Alert Test for {target_email}"
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-      <h2 style="color: #0f172a; margin-bottom: 16px;">🔑 PillSync Email Connection Test</h2>
-      <p style="color: #475569; font-size: 14px; line-height: 1.5;">This is a test notification confirming that PillSync successfully verified this email address for scheduled dose alerts.</p>
+      <h2 style="color: #0f172a; margin-bottom: 16px;">🔑 PillSync Live Notification Verification</h2>
+      <p style="color: #475569; font-size: 14px; line-height: 1.5;">Hello <strong>{current_user.name}</strong>,</p>
+      <p style="color: #475569; font-size: 14px; line-height: 1.5;">This is a live test notification confirming that PillSync is actively configured to send medicine alerts to your recipient email: <strong>{target_email}</strong>.</p>
       
-      <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
-        <span style="display: block; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #3b82f6; margin-bottom: 4px;">Daily Health Quote</span>
+      <div style="background-color: #f8fafc; border-left: 4px solid #06b6d4; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+        <span style="display: block; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #06b6d4; margin-bottom: 4px;">Daily Motivational Quote</span>
         <p style="color: #334155; font-size: 14px; font-style: italic; margin: 0;">"{quote}"</p>
       </div>
+
+      <p style="margin: 24px 0; text-align: left;">
+        <a href="http://localhost:5173/login" style="background-color: #06b6d4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(6, 182, 212, 0.2);">Open PillSync Login Page</a>
+      </p>
       
-      <p style="color: #64748b; font-size: 12px; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 24px;">PillSync Intelligent Medicine Tracker</p>
+      <p style="color: #64748b; font-size: 12px; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 24px;">PillSync Intelligent Medicine Tracker Engine</p>
     </div>
     """
-    send_email_notification(req.email, subject, html_body)
-    return {"status": "Test email sent."}
+    send_email_notification(target_email, subject, html_body)
+    return {"status": f"Test email successfully dispatched to {target_email}."}
 
 
 
@@ -256,6 +269,14 @@ def respond_to_link(
             detail="You do not have access to respond to this association request"
         )
         
+    # Strict rule: Caregivers cannot accept requests sent to patients.
+    # Only the target patient can log in and accept the caregiver.
+    if status_update == "active" and current_user.role == "caregiver":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only the patient can accept this caregiver connection request. The patient must log into their account to accept."
+        )
+
     link.status = status_update
     db.commit()
     db.refresh(link)
@@ -271,6 +292,29 @@ def respond_to_link(
         "caregiver_name": link.caregiver.name,
         "caregiver_email": link.caregiver.email
     }
+
+
+@router.delete("/associations/{link_id}", status_code=status.HTTP_200_OK)
+def delete_association(
+    link_id: int,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    link = db.query(models.PatientCaregiver).filter(models.PatientCaregiver.id == link_id).first()
+    if not link:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Association link not found"
+        )
+    if current_user.id != link.patient_id and current_user.id != link.caregiver_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this association"
+        )
+    
+    db.delete(link)
+    db.commit()
+    return {"status": "Association removed successfully"}
 
 
 @router.put("/me/password", status_code=status.HTTP_200_OK)
@@ -306,5 +350,45 @@ def chatbot_interaction(
     from app.ai_service import get_chatbot_response
     reply = get_chatbot_response(req.message, current_user.name, med_names, score)
     return {"reply": reply}
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        user_id = current_user.id
+
+        # 1. Delete all medication logs for user
+        db.query(models.MedicationLog).filter(models.MedicationLog.user_id == user_id).delete(synchronize_session=False)
+
+        # 2. Delete all reminders for user's medicines
+        user_medicines = db.query(models.Medicine).filter(models.Medicine.user_id == user_id).all()
+        user_med_ids = [m.id for m in user_medicines]
+        if user_med_ids:
+            db.query(models.MedicationLog).filter(models.MedicationLog.reminder_id.in_(user_med_ids)).delete(synchronize_session=False)
+            db.query(models.Reminder).filter(models.Reminder.medicine_id.in_(user_med_ids)).delete(synchronize_session=False)
+
+        # 3. Delete medicines
+        db.query(models.Medicine).filter(models.Medicine.user_id == user_id).delete(synchronize_session=False)
+
+        # 4. Delete caregiver-patient links
+        db.query(models.PatientCaregiver).filter(
+            (models.PatientCaregiver.caregiver_id == user_id) | 
+            (models.PatientCaregiver.patient_id == user_id)
+        ).delete(synchronize_session=False)
+
+        # 5. Delete user record
+        db.query(models.User).filter(models.User.id == user_id).delete(synchronize_session=False)
+        db.commit()
+        return None
+    except Exception as e:
+        db.rollback()
+        print("Delete account error:", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete account: {str(e)}"
+        )
 
 

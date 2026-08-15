@@ -46,6 +46,7 @@ export interface ProfileUpdateData {
   name?: string;
   email?: string;
   notification_email?: string;
+  role?: string;
 }
 
 export interface PasswordChangeData {
@@ -68,6 +69,8 @@ export interface Medicine {
   source: string;
   food_relation?: string;
   notifications_enabled?: boolean;
+  is_archived?: boolean;
+  discontinue_reason?: string;
   created_at: string;
 }
 
@@ -116,10 +119,17 @@ export interface ResetPasswordData {
   new_password: string;
 }
 
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 export interface GoogleAuthData {
-  email: string;
-  name: string;
-  role: string;
+  credential?: string;
+  email?: string;
+  name?: string;
+  role?: string;
 }
 
 

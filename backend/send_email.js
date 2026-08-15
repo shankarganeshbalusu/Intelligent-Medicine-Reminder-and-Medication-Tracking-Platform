@@ -46,7 +46,7 @@ async function sendMail() {
     fs.writeFileSync(envPath, newEnv);
   }
 
-  let transporter = nodemailer.createTransport({
+  let transportConfig = {
     host: host,
     port: port,
     secure: port === 465,
@@ -54,7 +54,25 @@ async function sendMail() {
       user: user,
       pass: pass,
     },
-  });
+    tls: {
+      rejectUnauthorized: false
+    }
+  };
+
+  if (host.includes('gmail')) {
+    transportConfig = {
+      service: 'gmail',
+      auth: {
+        user: user,
+        pass: pass,
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    };
+  }
+
+  let transporter = nodemailer.createTransport(transportConfig);
 
   let mailOptions = {
     from: `"PillSync Support" <${env.SENDER_EMAIL || user}>`,
@@ -64,7 +82,15 @@ async function sendMail() {
   };
 
   let info = await transporter.sendMail(mailOptions);
-  console.log("Message sent: %s", info.messageId);
+  console.log("Message sent: %s to %s", info.messageId, toEmail);
+
+  try {
+    const logEntry = `[${new Date().toISOString()}] TO: ${toEmail} | SUBJECT: ${subject}\n`;
+    const logPath = path.join(__dirname, 'dispatched_emails.log');
+    fs.appendFileSync(logPath, logEntry);
+  } catch (err) {
+    // Ignore logging errors
+  }
   
   const previewUrl = nodemailer.getTestMessageUrl(info);
   if (previewUrl) {

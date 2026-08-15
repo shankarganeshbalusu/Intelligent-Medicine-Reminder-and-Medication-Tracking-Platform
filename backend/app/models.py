@@ -12,6 +12,10 @@ class User(Base):
     notification_email = Column(String, index=True, nullable=True)
     password_hash = Column(String, nullable=False)
     role = Column(String, default="patient")  # patient, caregiver, admin
+    is_verified = Column(Boolean, default=False, nullable=False)
+    verification_token = Column(String, nullable=True)
+    google_otp_code = Column(String, nullable=True)
+    google_otp_expiry = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     # Relationships
@@ -66,6 +70,8 @@ class Medicine(Base):
     source = Column(String, default="manual")  # manual, prescription, lookup
     food_relation = Column(String, default="No Preference")  # "Before Food", "After Food", "No Preference"
     notifications_enabled = Column(Boolean, default=True, nullable=False)
+    is_archived = Column(Boolean, default=False, nullable=False)
+    discontinue_reason = Column(String, nullable=True, default="Discontinued / Removed")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     # Relationships

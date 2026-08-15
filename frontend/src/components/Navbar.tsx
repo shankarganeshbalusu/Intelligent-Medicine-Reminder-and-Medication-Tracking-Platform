@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Pill, LogOut, User as UserIcon, Sparkles } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Pill, LogOut, User as UserIcon, Sparkles, Home, LayoutDashboard, Scan, BarChart3, RefreshCw, FileText } from 'lucide-react';
 import { authService } from '../services/auth';
 
 interface NavbarProps {
@@ -10,6 +10,9 @@ interface NavbarProps {
 
 export default function Navbar({ user, onLogout, onAskAI }: NavbarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = () => {
     authService.logout();
@@ -18,90 +21,156 @@ export default function Navbar({ user, onLogout, onAskAI }: NavbarProps) {
   };
 
   return (
-    <nav className="bg-white/70 sticky top-0 z-50 backdrop-blur-md border-b border-slate-200/50 shadow-sm">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center gap-6">
-            <Link to="/" className="flex-shrink-0 flex items-center gap-2">
-              <Pill className="h-6 w-6 text-brand-500 animate-heartbeat" />
-              <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-brand-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                PillSync
-              </span>
-            </Link>
+    <nav className="bg-slate-900/95 sticky top-3 mx-auto z-50 backdrop-blur-2xl border-2 border-cyan-500/40 shadow-[0_0_35px_rgba(6,182,212,0.25)] rounded-2xl md:rounded-full max-w-7xl w-[98%] transition-all duration-300">
+      <div className="px-3 sm:px-6 w-full">
+        <div className="flex items-center justify-between min-h-[56px] py-1.5 gap-2">
+          {/* Brand Logo */}
+          <Link to={user ? "/dashboard" : "/"} className="flex-shrink-0 flex items-center gap-2 mr-2 group" title={user ? "Go to Dashboard" : "Go to Home Page"}>
+            <div className="p-1.5 bg-cyan-500/20 rounded-xl border border-cyan-400/40 group-hover:scale-105 transition-transform">
+              <Pill className="h-5 w-5 text-cyan-400 animate-heartbeat" />
+            </div>
+            <span className="text-xl font-black tracking-tighter bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
+              PillSync
+            </span>
+          </Link>
+
+          {/* Navigation Links (No scrollbar, perfectly spaced) */}
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {!user && (
+              <Link
+                to="/"
+                className={`flex items-center gap-1.5 text-[11px] lg:text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-full transition-all shrink-0 ${
+                  isActive('/')
+                    ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)]'
+                    : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/80'
+                }`}
+              >
+                <Home className="h-3.5 w-3.5" />
+                <span>Home</span>
+              </Link>
+            )}
+
             {user && (
-              <div className="flex items-center gap-4">
+              <>
                 <Link
                   to="/dashboard"
-                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                  className={`flex items-center gap-1.5 text-[11px] lg:text-xs font-black uppercase tracking-wider px-2.5 sm:px-3.5 py-1.5 rounded-full transition-all shrink-0 ${
+                    isActive('/dashboard')
+                      ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)]'
+                      : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/80'
+                  }`}
                 >
-                  Dashboard
+                  <LayoutDashboard className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Dashboard</span>
                 </Link>
                 <Link
                   to="/medicines"
-                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                  className={`flex items-center gap-1.5 text-[11px] lg:text-xs font-black uppercase tracking-wider px-2.5 sm:px-3.5 py-1.5 rounded-full transition-all shrink-0 ${
+                    isActive('/medicines')
+                      ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)]'
+                      : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/80'
+                  }`}
                 >
-                  Medicines
+                  <Pill className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Cabinet</span>
+                </Link>
+                <Link
+                  to="/refill"
+                  className={`flex items-center gap-1.5 text-[11px] lg:text-xs font-black uppercase tracking-wider px-2.5 sm:px-3.5 py-1.5 rounded-full transition-all shrink-0 ${
+                    isActive('/refill')
+                      ? 'bg-gradient-to-r from-amber-500 via-orange-600 to-amber-600 text-white shadow-[0_0_20px_rgba(245,158,11,0.5)]'
+                      : 'text-slate-300 hover:text-amber-400 hover:bg-slate-800/80'
+                  }`}
+                >
+                  <RefreshCw className="h-3.5 w-3.5 text-amber-400 animate-spin-slow" />
+                  <span>Refill Tracker</span>
+                </Link>
+                <Link
+                  to="/medical-records"
+                  className={`flex items-center gap-1.5 text-[11px] lg:text-xs font-black uppercase tracking-wider px-2.5 sm:px-3.5 py-1.5 rounded-full transition-all shrink-0 ${
+                    isActive('/medical-records')
+                      ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)]'
+                      : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/80'
+                  }`}
+                >
+                  <FileText className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Medical Records</span>
                 </Link>
                 <Link
                   to="/prescription-ocr"
-                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                  className={`flex items-center gap-1.5 text-[11px] lg:text-xs font-black uppercase tracking-wider px-2.5 sm:px-3.5 py-1.5 rounded-full transition-all shrink-0 ${
+                    isActive('/prescription-ocr')
+                      ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)]'
+                      : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/80'
+                  }`}
                 >
-                  Prescription OCR
+                  <Scan className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>AI Scanner</span>
                 </Link>
                 <Link
                   to="/history"
-                  className="text-sm font-medium text-slate-600 hover:text-brand-500 transition-colors"
+                  className={`flex items-center gap-1.5 text-[11px] lg:text-xs font-black uppercase tracking-wider px-2.5 sm:px-3.5 py-1.5 rounded-full transition-all shrink-0 ${
+                    isActive('/history')
+                      ? 'bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.5)]'
+                      : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/80'
+                  }`}
                 >
-                  History
+                  <BarChart3 className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Report Analysis</span>
                 </Link>
                 {user?.role === 'patient' && onAskAI && (
                   <button
                     onClick={onAskAI}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 active:scale-95 text-white text-xs font-bold rounded-full shadow-md shadow-brand-100/30 hover:shadow-lg transition-all"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 active:scale-95 text-[10px] lg:text-[11px] font-black uppercase tracking-wider text-white rounded-full shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all ml-1 shrink-0 cursor-pointer"
                   >
-                    <Sparkles className="h-3 w-3 text-yellow-300 animate-pulse" />
+                    <Sparkles className="h-3 w-3 text-cyan-200 animate-pulse" />
                     <span>Ask AI</span>
                   </button>
                 )}
-              </div>
+              </>
             )}
           </div>
 
-          <div className="flex items-center">
+          {/* User Account Controls */}
+          <div className="flex items-center shrink-0 ml-2">
             {user ? (
-              <div className="flex items-center gap-4">
-                <div className="hidden md:flex flex-col text-right">
-                  <span className="text-sm font-medium text-slate-700">{user.name}</span>
-                  <span className="text-xs text-slate-400 capitalize">{user.role}</span>
+              <div className="flex items-center gap-2.5">
+                <div className="hidden xl:flex flex-col text-right">
+                  <span className="text-xs font-black text-white leading-none">{user.name}</span>
+                  <span className="text-[9px] font-extrabold text-cyan-400 uppercase tracking-widest block mt-0.5">{user.role}</span>
                 </div>
                 
                 <Link
                   to="/profile"
-                  className="p-2 rounded-full text-slate-500 hover:text-brand-500 hover:bg-slate-50 transition-colors"
-                  title="Profile"
+                  className={`p-2 rounded-full transition-all ${
+                    isActive('/profile')
+                      ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                      : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/80 border border-slate-700/60'
+                  }`}
+                  title="My Profile & Settings"
                 >
-                  <UserIcon className="h-5 w-5" />
+                  <UserIcon className="h-4 w-4" />
                 </Link>
 
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 hover:border-red-100 transition-all"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border-2 border-slate-700/80 text-xs font-black text-slate-200 hover:text-rose-300 hover:bg-rose-950/60 hover:border-rose-500/60 transition-all cursor-pointer shadow-sm"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut className="h-3.5 w-3.5 text-rose-400" />
                   <span className="hidden sm:inline">Logout</span>
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Link
                   to="/login"
-                  className="text-sm font-medium text-slate-600 hover:text-brand-600 px-3 py-2 transition-colors"
+                  className="text-xs font-extrabold text-slate-300 hover:text-cyan-400 px-3 py-1.5 rounded-full transition-all"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="text-sm font-medium bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg shadow-sm shadow-brand-100 hover:shadow-md transition-all"
+                  className="text-xs font-black bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-4 py-2 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all hover:scale-[1.02] active:scale-95"
                 >
                   Sign Up
                 </Link>

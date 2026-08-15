@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Pill, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { Pill, Mail, Lock, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../services/auth';
 
 interface LoginProps {
@@ -10,6 +10,7 @@ interface LoginProps {
 export default function Login({ onLoginSuccess }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
   const handleGoogleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!googleEmail || !googleName) return;
+    if (!googleEmail) return;
 
     setLoading(true);
     setError('');
@@ -31,7 +32,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     try {
       await authService.googleLogin({
         email: googleEmail,
-        name: googleName,
+        name: googleName || googleEmail.split('@')[0],
         role: googleRole
       });
       onLoginSuccess();
@@ -57,7 +58,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     try {
       await authService.login({ email, password });
       onLoginSuccess();
-      navigate('/profile');
+      navigate('/dashboard');
     } catch (err: any) {
       console.error(err);
       setError(
@@ -70,7 +71,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-center relative animate-fade-in min-h-[500px]">
+    <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-center relative animate-page-3d min-h-[500px]">
       {/* Left Column: Visual Artwork panel */}
       <div className="hidden md:flex md:col-span-5 flex-col justify-center text-left bg-gradient-to-br from-brand-950 via-brand-900 to-indigo-950 p-8 rounded-3xl border border-brand-800/40 shadow-2xl shadow-brand-500/10 relative overflow-hidden h-full min-h-[520px] animate-glow-purple">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(14,144,233,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(14,144,233,0.03)_1px,transparent_1px)] bg-[size:12px_12px]" />
@@ -93,12 +94,56 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             </p>
           </div>
 
-          <div className="flex justify-center py-4">
-            <img
-              src="/src/assets/pillsync_hero_artwork.jpg"
-              alt="PillSync Artwork"
-              className="h-48 w-48 object-cover rounded-2xl shadow-lg border border-purple-700/50 animate-heartbeat bg-slate-800"
-            />
+          <div className="flex justify-center py-4 relative" style={{ perspective: '800px', transformStyle: 'preserve-3d' }}>
+            {/* Glossy 3D medicine setup */}
+            <div className="relative w-44 h-48 flex items-center justify-center transition-all duration-700" style={{ transformStyle: 'preserve-3d', transform: 'rotateY(-6deg) rotateX(10deg)' }}>
+              
+              {/* Rotating holographic rings */}
+              <div className="absolute w-36 h-36 border border-brand-500/25 rounded-full animate-spin-slow" />
+              <div className="absolute w-28 h-28 border border-dashed border-indigo-500/25 rounded-full animate-reverse-spin" />
+
+              {/* Volumetric bottle */}
+              <div className="absolute animate-float-slow flex items-center justify-center" style={{ transform: 'translateZ(20px)' }}>
+                <svg width="65" height="110" viewBox="0 0 90 150" fill="none" xmlns="http://www.w3.org/2000/svg" className="filter drop-shadow-[0_12px_24px_rgba(14,144,233,0.3)]">
+                  <rect x="25" y="5" width="40" height="15" rx="4" fill="url(#cap-grad)" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
+                  <rect x="33" y="20" width="24" height="12" fill="url(#glass-neck-grad)" />
+                  <rect x="15" y="32" width="60" height="110" rx="18" fill="url(#glass-body-grad)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+                  <rect x="25" y="65" width="40" height="40" rx="8" fill="rgba(255,255,255,0.95)" />
+                  <path d="M 45,75 L 45,95 M 35,85 L 55,85" stroke="#0e90e9" strokeWidth="6" strokeLinecap="round" />
+                  <path d="M 23,45 Q 23,135 23,135" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.35" />
+                  <defs>
+                    <linearGradient id="cap-grad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#4f46e5" />
+                      <stop offset="100%" stopColor="#0e90e9" />
+                    </linearGradient>
+                    <linearGradient id="glass-neck-grad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="rgba(14, 144, 233, 0.4)" />
+                      <stop offset="50%" stopColor="rgba(255,255,255,0.6)" />
+                      <stop offset="100%" stopColor="rgba(14, 144, 233, 0.2)" />
+                    </linearGradient>
+                    <linearGradient id="glass-body-grad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="rgba(255,255,255,0.45)" />
+                      <stop offset="30%" stopColor="rgba(14, 144, 233, 0.15)" />
+                      <stop offset="70%" stopColor="rgba(99, 102, 241, 0.15)" />
+                      <stop offset="100%" stopColor="rgba(255,255,255,0.3)" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+
+              {/* Floating capsules */}
+              <div className="absolute top-4 -left-6 animate-float-delayed transform-gpu" style={{ transform: 'translateZ(40px) rotate(15deg)' }}>
+                <div className="w-10 h-4.5 rounded-full bg-gradient-to-r from-red-500 to-indigo-500 border border-white/35 shadow-md flex items-center justify-between px-0.5 relative">
+                  <div className="w-4 h-3 bg-white/20 rounded-full" />
+                </div>
+              </div>
+
+              <div className="absolute bottom-6 -right-6 animate-float-slow transform-gpu" style={{ transform: 'translateZ(50px) rotate(-20deg)' }}>
+                <div className="w-10 h-4.5 rounded-full bg-gradient-to-r from-cyan-400 to-brand-600 border border-white/35 shadow-md flex items-center justify-between px-0.5 relative">
+                  <div className="w-4 h-3 bg-white/20 rounded-full" />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="text-xs text-purple-300 border-t border-purple-800/40 pt-4 flex items-center justify-between">
@@ -124,30 +169,30 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           </svg>
         </div>
 
-        <div className="glass-panel rounded-3xl shadow-2xl shadow-indigo-500/5 p-8 relative overflow-hidden text-slate-950">
+        <div className="glass-card rounded-3xl p-8 relative overflow-hidden bg-slate-900/90 border border-cyan-500/30 backdrop-blur-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)] text-white">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center p-3 bg-gradient-to-br from-indigo-50 to-purple-50 border border-purple-100 rounded-2xl text-purple-600 mb-4 relative">
+            <div className="inline-flex items-center justify-center p-3 bg-cyan-500/20 border border-cyan-500/40 rounded-2xl text-cyan-400 mb-4 relative">
               <Pill className="h-8 w-8 animate-heartbeat" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-emerald-500 rounded-full border-2 border-white animate-glow-green" />
+              <span className="absolute -top-1 -right-1 h-3 w-3 bg-emerald-500 rounded-full border-2 border-slate-900 animate-glow-green" />
             </div>
-            <h2 className="text-2xl font-black text-slate-950 tracking-tight">Welcome Back</h2>
-            <p className="text-sm text-slate-900 font-bold mt-1">Manage your medication routines intelligently</p>
+            <h2 className="text-2xl font-black text-white tracking-tight">Welcome Back</h2>
+            <p className="text-sm text-slate-300 font-semibold mt-1">Manage your medication routines intelligently</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 text-sm">
-              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/40 rounded-xl flex items-start gap-3 text-red-300 text-sm font-bold shadow-sm">
+              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 text-red-400" />
               <span>{error}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-bold text-slate-950 mb-2">
+              <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-2">
                 Email Address
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-cyan-400 pointer-events-none z-10">
                   <Mail className="h-5 w-5" />
                 </span>
                 <input
@@ -155,7 +200,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-slate-950 font-medium bg-slate-50/50"
+                  className="w-full pl-12 pr-4 py-3 rounded-xl border border-cyan-500/30 bg-slate-900 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 transition-all font-semibold shadow-inner"
                   placeholder="you@example.com"
                 />
               </div>
@@ -163,32 +208,44 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-bold text-slate-950">
+                <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider">
                   Password
                 </label>
-                <Link to="/forgot-password" className="text-xs text-brand-600 hover:underline font-bold">
+                <Link to="/forgot-password" className="text-xs text-cyan-400 hover:text-cyan-300 hover:underline font-extrabold">
                   Forgot Password?
                 </Link>
               </div>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-cyan-400 pointer-events-none z-10">
                   <Lock className="h-5 w-5" />
                 </span>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-slate-950 font-medium bg-slate-50/50"
+                  className="w-full pl-12 pr-12 py-3 rounded-xl border border-cyan-500/30 bg-slate-900 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 transition-all font-semibold shadow-inner"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer z-10"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-cyan-400" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-cyan-400" />
+                  )}
+                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center py-3 bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-100 hover:shadow-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full flex items-center justify-center py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
             >
               {loading ? (
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -198,16 +255,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           </form>
 
           <div className="relative my-6 text-center">
-            <div className="absolute inset-y-1/2 left-0 right-0 border-t border-slate-200"></div>
-            <span className="relative px-3.5 bg-white text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div className="absolute inset-y-1/2 left-0 right-0 border-t border-slate-800"></div>
+            <span className="relative px-3.5 bg-slate-900 text-xs font-black text-slate-400 uppercase tracking-wider">
               Or
             </span>
           </div>
 
           <button
             type="button"
-            onClick={() => setShowGoogleModal(true)}
-            className="w-full flex items-center justify-center gap-2.5 py-3 border border-slate-200 hover:bg-slate-50 font-bold rounded-xl text-slate-800 transition-all shadow-sm"
+            onClick={() => navigate('/google-auth')}
+            className="w-full flex items-center justify-center gap-2.5 py-3 border border-cyan-500/30 bg-slate-900 hover:bg-slate-800 font-black rounded-xl text-white transition-all shadow-[0_0_15px_rgba(6,182,212,0.15)] cursor-pointer"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path
@@ -219,9 +276,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           </button>
 
           <div className="text-center mt-6">
-            <p className="text-sm text-slate-950 font-bold">
+            <p className="text-sm text-slate-300 font-semibold">
               Don't have an account?{' '}
-              <Link to="/register" className="text-brand-600 font-extrabold hover:underline">
+              <Link to="/register" className="text-cyan-400 font-extrabold hover:text-cyan-300 hover:underline">
                 Create an account
               </Link>
             </p>
@@ -230,9 +287,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       </div>
 
       {showGoogleModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-xl border border-slate-100 animate-scale-in">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-2">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-card bg-slate-900 border border-cyan-500/30 rounded-3xl max-w-sm w-full p-6 shadow-[0_0_30px_rgba(6,182,212,0.2)] text-white animate-scale-in">
+            <h3 className="text-lg font-black text-white flex items-center gap-2 mb-2">
               <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
@@ -251,58 +308,58 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Choose Google Account
+              Google Account Sign In
             </h3>
-            <p className="text-slate-400 text-xs mb-5">Sign in to PillSync via Google Authentication simulator.</p>
+            <p className="text-slate-300 text-xs font-semibold mb-5">Sign in safely to PillSync with any Google email.</p>
             
             <form onSubmit={handleGoogleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Google Email</label>
+                <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-1">Google Email</label>
                 <input
                   type="email"
                   required
-                  placeholder="name@gmail.com"
+                  placeholder="shankarganeshbalusu@gmail.com"
                   value={googleEmail}
                   onChange={(e) => setGoogleEmail(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800"
+                  className="w-full px-3.5 py-2.5 border border-cyan-500/30 rounded-xl text-sm bg-slate-900 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 font-semibold"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+                <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-1">Full Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. Shankar Ganesh"
                   value={googleName}
                   onChange={(e) => setGoogleName(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800"
+                  className="w-full px-3.5 py-2.5 border border-cyan-500/30 rounded-xl text-sm bg-slate-900 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 font-semibold"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Choose Role</label>
+                <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-1">Select Role</label>
                 <select
                   value={googleRole}
                   onChange={(e) => setGoogleRole(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-700 font-medium"
+                  className="w-full px-3.5 py-2.5 border border-cyan-500/30 rounded-xl text-sm bg-slate-900 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 font-semibold cursor-pointer"
                 >
-                  <option value="patient">Patient</option>
-                  <option value="caregiver">Caregiver</option>
+                  <option value="patient" className="bg-slate-900 text-white">Patient</option>
+                  <option value="caregiver" className="bg-slate-900 text-white">Caregiver</option>
                 </select>
               </div>
 
-              <div className="flex gap-3 border-t border-slate-100 pt-4 mt-5">
+              <div className="flex gap-3 border-t border-slate-800 pt-4 mt-5">
                 <button
                   type="button"
                   onClick={() => setShowGoogleModal(false)}
-                  className="flex-1 py-2 border border-slate-200 hover:bg-slate-50 font-semibold text-sm text-slate-600 rounded-xl transition-all"
+                  className="flex-1 py-2.5 border border-slate-700 hover:bg-slate-800 font-bold text-xs text-slate-300 rounded-xl transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm rounded-xl transition-all shadow-sm"
+                  className="flex-1 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs rounded-xl transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] cursor-pointer"
                 >
-                  Sign In
+                  Sign In with Google
                 </button>
               </div>
             </form>
