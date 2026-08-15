@@ -26,8 +26,8 @@ def send_email_notification(to_email: str, subject: str, html_body: str):
     """Sends email directly via fast native Python smtplib with Node.js fallback and local outbox audit logging."""
     smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER", "maths4412@gmail.com")
-    smtp_password = os.getenv("SMTP_PASSWORD", "ffawgczfiszwouhu")
+    smtp_user = os.getenv("SMTP_USER", "")
+    smtp_password = os.getenv("SMTP_PASSWORD", "")
     sender_email = os.getenv("SENDER_EMAIL", smtp_user)
 
     # Audit log to backend/dispatched_emails.txt for verification
