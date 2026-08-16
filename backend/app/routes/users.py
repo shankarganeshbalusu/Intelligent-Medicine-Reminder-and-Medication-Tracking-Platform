@@ -31,15 +31,23 @@ def update_profile(
             current_user.email = profile_in.email
     if profile_in.notification_email is not None:
         current_user.notification_email = profile_in.notification_email
+    if profile_in.role is not None and profile_in.role in ["patient", "caregiver"]:
+        current_user.role = profile_in.role
     db.commit()
     db.refresh(current_user)
     return current_user
 
 
 @router.post("/send-test-email")
-def send_test_email(req: schemas.TestEmailRequest, db: Session = Depends(get_db)):
+def send_test_email(
+    req: schemas.TestEmailRequest,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
     from app.email_worker import send_email_notification
     import random
+    
+    target_email = req.email.strip().lower() if req.email else current_user.email.strip().lower()
     
     quotes = [
         "Health is wealth.",
@@ -53,22 +61,27 @@ def send_test_email(req: schemas.TestEmailRequest, db: Session = Depends(get_db)
     ]
     quote = random.choice(quotes)
     
-    subject = "test PillSync Connection"
+    subject = f"🔔 PillSync Live Alert Test for {target_email}"
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-      <h2 style="color: #0f172a; margin-bottom: 16px;">🔑 PillSync Email Connection Test</h2>
-      <p style="color: #475569; font-size: 14px; line-height: 1.5;">This is a test notification confirming that PillSync successfully verified this email address for scheduled dose alerts.</p>
+      <h2 style="color: #0f172a; margin-bottom: 16px;">🔑 PillSync Live Notification Verification</h2>
+      <p style="color: #475569; font-size: 14px; line-height: 1.5;">Hello <strong>{current_user.name}</strong>,</p>
+      <p style="color: #475569; font-size: 14px; line-height: 1.5;">This is a live test notification confirming that PillSync is actively configured to send medicine alerts to your recipient email: <strong>{target_email}</strong>.</p>
       
-      <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
-        <span style="display: block; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #3b82f6; margin-bottom: 4px;">Daily Health Quote</span>
+      <div style="background-color: #f8fafc; border-left: 4px solid #06b6d4; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+        <span style="display: block; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #06b6d4; margin-bottom: 4px;">Daily Motivational Quote</span>
         <p style="color: #334155; font-size: 14px; font-style: italic; margin: 0;">"{quote}"</p>
       </div>
+
+      <p style="margin: 24px 0; text-align: left;">
+        <a href="http://localhost:5173/login" style="background-color: #06b6d4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(6, 182, 212, 0.2);">Open PillSync Login Page</a>
+      </p>
       
-      <p style="color: #64748b; font-size: 12px; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 24px;">PillSync Intelligent Medicine Tracker</p>
+      <p style="color: #64748b; font-size: 12px; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 24px;">PillSync Intelligent Medicine Tracker Engine</p>
     </div>
     """
-    send_email_notification(req.email, subject, html_body)
-    return {"status": "Test email sent."}
+    send_email_notification(target_email, subject, html_body)
+    return {"status": f"Test email successfully dispatched to {target_email}."}
 
 
 
@@ -256,6 +269,14 @@ def respond_to_link(
             detail="You do not have access to respond to this association request"
         )
         
+    # Strict rule: Caregivers cannot accept requests sent to patients.
+    # Only the target patient can log in and accept the caregiver.
+    if status_update == "active" and current_user.role == "caregiver":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only the patient can accept this caregiver connection request. The patient must log into their account to accept."
+        )
+
     link.status = status_update
     db.commit()
     db.refresh(link)
@@ -271,6 +292,29 @@ def respond_to_link(
         "caregiver_name": link.caregiver.name,
         "caregiver_email": link.caregiver.email
     }
+
+
+@router.delete("/associations/{link_id}", status_code=status.HTTP_200_OK)
+def delete_association(
+    link_id: int,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    link = db.query(models.PatientCaregiver).filter(models.PatientCaregiver.id == link_id).first()
+    if not link:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Association link not found"
+        )
+    if current_user.id != link.patient_id and current_user.id != link.caregiver_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this association"
+        )
+    
+    db.delete(link)
+    db.commit()
+    return {"status": "Association removed successfully"}
 
 
 @router.put("/me/password", status_code=status.HTTP_200_OK)
@@ -295,16 +339,261 @@ def chatbot_interaction(
     current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    active_meds = db.query(models.Medicine).filter(models.Medicine.user_id == current_user.id).all()
-    med_names = [m.name for m in active_meds]
-    
+    med_card_details = []
+    emergency_card_details = []
+    patient_context_name = current_user.name
+
+    if current_user.role == "patient":
+        # 1. Active Medicines
+        active_meds = db.query(models.Medicine).filter(
+            models.Medicine.user_id == current_user.id,
+            models.Medicine.is_archived == False
+        ).all()
+        for m in active_meds:
+            med_card_details.append({
+                "name": m.name,
+                "generic_name": m.generic_name or "",
+                "dosage": m.dosage,
+                "quantity": m.quantity,
+                "times_per_day": m.times_per_day,
+                "duration_days": m.duration_days,
+                "food_relation": m.food_relation or "No Preference",
+                "custom_times": m.custom_times or "",
+                "days_of_week": m.days_of_week or "Daily"
+            })
+
+        # 2. Emergency Info Card
+        emg = db.query(models.EmergencyInfo).filter(models.EmergencyInfo.user_id == current_user.id).first()
+        if emg:
+            emergency_card_details.append({
+                "patient_name": current_user.name,
+                "blood_group": emg.blood_group or "Not Specified",
+                "emergency_contact_name": emg.emergency_contact_name or "None",
+                "emergency_contact_phone": emg.emergency_contact_phone or "None",
+                "relationship": emg.contact_relationship or "None",
+                "allergies": emg.allergies or "No Known Allergies",
+                "medical_conditions": emg.medical_conditions or "None Listed",
+                "doctor_name": emg.doctor_name or "None",
+                "doctor_phone": emg.doctor_phone or "None",
+                "important_notes": emg.important_notes or ""
+            })
+
+    elif current_user.role == "caregiver":
+        # Caregiver inspecting assigned patients
+        links = db.query(models.PatientCaregiver).filter(
+            models.PatientCaregiver.caregiver_id == current_user.id,
+            models.PatientCaregiver.status == "active"
+        ).all()
+
+        patient_names = []
+        for l in links:
+            patient = l.patient
+            if patient:
+                patient_names.append(patient.name)
+                # Patient meds
+                p_meds = db.query(models.Medicine).filter(
+                    models.Medicine.user_id == patient.id,
+                    models.Medicine.is_archived == False
+                ).all()
+                for m in p_meds:
+                    med_card_details.append({
+                        "patient_name": patient.name,
+                        "name": m.name,
+                        "generic_name": m.generic_name or "",
+                        "dosage": m.dosage,
+                        "quantity": m.quantity,
+                        "times_per_day": m.times_per_day,
+                        "duration_days": m.duration_days,
+                        "food_relation": m.food_relation or "No Preference",
+                        "custom_times": m.custom_times or "",
+                        "days_of_week": m.days_of_week or "Daily"
+                    })
+
+                # Patient emergency info
+                p_emg = db.query(models.EmergencyInfo).filter(models.EmergencyInfo.user_id == patient.id).first()
+                if p_emg:
+                    emergency_card_details.append({
+                        "patient_name": patient.name,
+                        "blood_group": p_emg.blood_group or "Not Specified",
+                        "emergency_contact_name": p_emg.emergency_contact_name or "None",
+                        "emergency_contact_phone": p_emg.emergency_contact_phone or "None",
+                        "relationship": p_emg.contact_relationship or "None",
+                        "allergies": p_emg.allergies or "No Known Allergies",
+                        "medical_conditions": p_emg.medical_conditions or "None Listed",
+                        "doctor_name": p_emg.doctor_name or "None",
+                        "doctor_phone": p_emg.doctor_phone or "None",
+                        "important_notes": p_emg.important_notes or ""
+                    })
+
+        patient_context_name = f"Caregiver {current_user.name} (Assigned Patients: {', '.join(patient_names) if patient_names else 'None'})"
+
+    # Compliance Logs
     logs = db.query(models.MedicationLog).filter(models.MedicationLog.user_id == current_user.id).all()
     taken = sum(1 for l in logs if l.status == "taken")
     total = len(logs)
     score = round((taken / total) * 100) if total > 0 else 100
     
     from app.ai_service import get_chatbot_response
-    reply = get_chatbot_response(req.message, current_user.name, med_names, score)
+    reply = get_chatbot_response(
+        message=req.message,
+        user_name=patient_context_name,
+        user_role=current_user.role,
+        medicine_details=med_card_details,
+        emergency_details=emergency_card_details,
+        compliance_score=score
+    )
     return {"reply": reply}
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        user_id = current_user.id
+
+        # 1. Delete all medication logs for user
+        db.query(models.MedicationLog).filter(models.MedicationLog.user_id == user_id).delete(synchronize_session=False)
+
+        # 2. Delete all reminders for user's medicines
+        user_medicines = db.query(models.Medicine).filter(models.Medicine.user_id == user_id).all()
+        user_med_ids = [m.id for m in user_medicines]
+        if user_med_ids:
+            db.query(models.MedicationLog).filter(models.MedicationLog.reminder_id.in_(user_med_ids)).delete(synchronize_session=False)
+            db.query(models.Reminder).filter(models.Reminder.medicine_id.in_(user_med_ids)).delete(synchronize_session=False)
+
+        # 3. Delete medicines
+        db.query(models.Medicine).filter(models.Medicine.user_id == user_id).delete(synchronize_session=False)
+
+        # 4. Delete caregiver-patient links
+        db.query(models.PatientCaregiver).filter(
+            (models.PatientCaregiver.caregiver_id == user_id) | 
+            (models.PatientCaregiver.patient_id == user_id)
+        ).delete(synchronize_session=False)
+
+        # 5. Delete user record
+        db.query(models.User).filter(models.User.id == user_id).delete(synchronize_session=False)
+        db.commit()
+        return None
+    except Exception as e:
+        db.rollback()
+        print("Delete account error:", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete account: {str(e)}"
+        )
+
+
+# --- EMERGENCY INFORMATION ENDPOINTS ---
+
+def _build_emergency_response(info: models.EmergencyInfo, user: models.User) -> schemas.EmergencyInfoResponse:
+    if not info:
+        return schemas.EmergencyInfoResponse(
+            user_id=user.id,
+            patient_name=user.name,
+            patient_email=user.email
+        )
+    return schemas.EmergencyInfoResponse(
+        id=info.id,
+        user_id=info.user_id,
+        patient_name=user.name,
+        patient_email=user.email,
+        blood_group=info.blood_group,
+        emergency_contact_name=info.emergency_contact_name,
+        emergency_contact_phone=info.emergency_contact_phone,
+        relationship=info.contact_relationship,
+        allergies=info.allergies,
+        medical_conditions=info.medical_conditions,
+        important_notes=info.important_notes,
+        doctor_name=info.doctor_name,
+        doctor_phone=info.doctor_phone,
+        updated_at=info.updated_at
+    )
+
+
+@router.get("/emergency-info", response_model=schemas.EmergencyInfoResponse)
+def get_own_emergency_info(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    info = db.query(models.EmergencyInfo).filter(models.EmergencyInfo.user_id == current_user.id).first()
+    return _build_emergency_response(info, current_user)
+
+
+@router.put("/emergency-info", response_model=schemas.EmergencyInfoResponse)
+def update_own_emergency_info(
+    info_in: schemas.EmergencyInfoCreate,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    info = db.query(models.EmergencyInfo).filter(models.EmergencyInfo.user_id == current_user.id).first()
+    if not info:
+        info = models.EmergencyInfo(
+            user_id=current_user.id,
+            blood_group=info_in.blood_group,
+            emergency_contact_name=info_in.emergency_contact_name,
+            emergency_contact_phone=info_in.emergency_contact_phone,
+            contact_relationship=info_in.relationship,
+            allergies=info_in.allergies,
+            medical_conditions=info_in.medical_conditions,
+            important_notes=info_in.important_notes,
+            doctor_name=info_in.doctor_name,
+            doctor_phone=info_in.doctor_phone
+        )
+        db.add(info)
+    else:
+        if info_in.blood_group is not None: info.blood_group = info_in.blood_group
+        if info_in.emergency_contact_name is not None: info.emergency_contact_name = info_in.emergency_contact_name
+        if info_in.emergency_contact_phone is not None: info.emergency_contact_phone = info_in.emergency_contact_phone
+        if info_in.relationship is not None: info.contact_relationship = info_in.relationship
+        if info_in.allergies is not None: info.allergies = info_in.allergies
+        if info_in.medical_conditions is not None: info.medical_conditions = info_in.medical_conditions
+        if info_in.important_notes is not None: info.important_notes = info_in.important_notes
+        if info_in.doctor_name is not None: info.doctor_name = info_in.doctor_name
+        if info_in.doctor_phone is not None: info.doctor_phone = info_in.doctor_phone
+        info.updated_at = datetime.datetime.utcnow()
+    
+    db.commit()
+    db.refresh(info)
+    return _build_emergency_response(info, current_user)
+
+
+@router.get("/patients/{patient_id}/emergency-info", response_model=schemas.EmergencyInfoResponse)
+def get_patient_emergency_info(
+    patient_id: int,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    # 1. Permission Check
+    if current_user.id == patient_id:
+        pass  # Patient accessing own record
+    elif current_user.role == "admin":
+        pass  # Admin access
+    elif current_user.role == "caregiver":
+        link = db.query(models.PatientCaregiver).filter(
+            models.PatientCaregiver.patient_id == patient_id,
+            models.PatientCaregiver.caregiver_id == current_user.id,
+            models.PatientCaregiver.status == "active"
+        ).first()
+        if not link:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You do not have permission to view emergency info for this patient."
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied."
+        )
+
+    patient = db.query(models.User).filter(models.User.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient record not found")
+
+    info = db.query(models.EmergencyInfo).filter(models.EmergencyInfo.user_id == patient_id).first()
+    return _build_emergency_response(info, patient)
+
+
 
 

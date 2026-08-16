@@ -12,12 +12,16 @@ export const medicinesService = {
     return response.data;
   },
 
-  async deleteMedicine(id: number): Promise<void> {
-    await api.delete(`/medicines/${id}`);
+  async deleteMedicine(id: number, reason?: string): Promise<void> {
+    const url = reason ? `/medicines/${id}?reason=${encodeURIComponent(reason)}` : `/medicines/${id}`;
+    await api.delete(url);
   },
 
-  async getMedicines(patientId?: number): Promise<Medicine[]> {
-    const url = patientId ? `/medicines?patient_id=${patientId}` : '/medicines';
+  async getMedicines(patientId?: number, includeArchived: boolean = false): Promise<Medicine[]> {
+    let url = patientId ? `/medicines?patient_id=${patientId}` : '/medicines';
+    if (includeArchived) {
+      url += (url.includes('?') ? '&' : '?') + 'include_archived=true';
+    }
     const response = await api.get<Medicine[]>(url);
     return response.data;
   },
@@ -47,6 +51,16 @@ export const medicinesService = {
         'Content-Type': 'multipart/form-data'
       }
     });
+    return response.data;
+  },
+
+  async refillMedicine(medicineId: number, additionalDays: number = 30): Promise<Medicine> {
+    const response = await api.post<Medicine>(`/medicines/${medicineId}/refill?additional_days=${additionalDays}`);
+    return response.data;
+  },
+
+  async sendRefillEmail(medicineId: number): Promise<any> {
+    const response = await api.post(`/medicines/${medicineId}/send-refill-email`);
     return response.data;
   },
 

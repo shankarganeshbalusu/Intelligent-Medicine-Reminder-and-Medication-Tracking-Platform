@@ -8,9 +8,25 @@ import Medicines from './pages/Medicines';
 import History from './pages/History';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import Navbar from './components/Navbar';
+import VerifyEmail from './pages/VerifyEmail';
+import GoogleAuth from './pages/GoogleAuth';
+import Sidebar from './components/Sidebar';
 import Home from './pages/Home';
 import PrescriptionOCR from './pages/PrescriptionOCR';
+import RefillTracker from './pages/RefillTracker';
+import MedicalRecords from './pages/MedicalRecords';
+import AdminProtectedRoute from './components/AdminProtectedRoute';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminPatients from './pages/admin/AdminPatients';
+import AdminCaregivers from './pages/admin/AdminCaregivers';
+import AdminMedicines from './pages/admin/AdminMedicines';
+import AdminActivity from './pages/admin/AdminActivity';
+import AdminRefillTracker from './pages/admin/AdminRefillTracker';
+import AdminMedicalRecords from './pages/admin/AdminMedicalRecords';
+import AdminNotifications from './pages/admin/AdminNotifications';
+import AdminReports from './pages/admin/AdminReports';
+import AdminSettings from './pages/admin/AdminSettings';
+import AdminProfile from './pages/admin/AdminProfile';
 import { authService } from './services/auth';
 import { usersService } from './services/users';
 import {
@@ -19,7 +35,6 @@ import {
   HeartPulse,
   Plus,
   Heart,
-  MessageSquare,
   Send,
   Sparkles,
   X,
@@ -73,6 +88,13 @@ function App() {
   return (
     <BrowserRouter>
       <div className="flex flex-col min-h-screen vibrant-mesh-bg text-slate-100 relative overflow-hidden">
+        {/* 3D Animated Grid Floor */}
+        <div className="grid-floor-3d" />
+
+        {/* Ambient Volumetric Glow Spheres */}
+        <div className="light-sphere-cyan top-[5%] left-[-10%] animate-sphere-1" />
+        <div className="light-sphere-purple bottom-[15%] right-[-10%] animate-sphere-2" />
+
         {/* Floating Medicine Background Logos */}
         <div className="absolute top-[12%] left-[8%] text-brand-500/10 animate-float-slow pointer-events-none">
           <Pill className="h-28 w-28 rotate-45 filter drop-shadow-[0_0_15px_rgba(14,144,233,0.1)]" />
@@ -93,8 +115,8 @@ function App() {
           <Heart className="h-20 w-20 filter drop-shadow-[0_0_15px_rgba(14,144,233,0.08)]" />
         </div>
 
-        <Navbar user={user} onLogout={handleAuthChange} onAskAI={() => setChatOpen(prev => !prev)} />
-        <main className="flex-grow flex items-center justify-center py-10 px-4 relative z-10">
+        <Sidebar user={user} onLogout={handleAuthChange} onAskAI={() => setChatOpen(prev => !prev)} />
+        <main className={`flex-grow min-h-screen py-8 px-4 sm:px-6 relative z-10 transition-all duration-300 ${user ? 'md:pl-56' : ''}`}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route 
@@ -117,8 +139,19 @@ function App() {
                 )
               } 
             />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route 
+              path="/forgot-password" 
+              element={
+                authService.isAuthenticated() ? (
+                  <Navigate to="/dashboard" replace />
+                ) : (
+                  <ForgotPassword />
+                )
+              } 
+            />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/google-auth" element={<GoogleAuth onLoginSuccess={handleAuthChange} />} />
             <Route 
               path="/dashboard" 
               element={
@@ -144,6 +177,22 @@ function App() {
               } 
             />
             <Route 
+              path="/refill" 
+              element={
+                <ProtectedRoute>
+                  <RefillTracker />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/medical-records" 
+              element={
+                <ProtectedRoute>
+                  <MedicalRecords />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/prescription-ocr" 
               element={
                 <ProtectedRoute>
@@ -159,16 +208,30 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+
+            {/* Admin Dashboard & Management Routes */}
+            <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+            <Route path="/admin/patients" element={<AdminProtectedRoute><AdminPatients /></AdminProtectedRoute>} />
+            <Route path="/admin/caregivers" element={<AdminProtectedRoute><AdminCaregivers /></AdminProtectedRoute>} />
+            <Route path="/admin/medicines" element={<AdminProtectedRoute><AdminMedicines /></AdminProtectedRoute>} />
+            <Route path="/admin/activity" element={<AdminProtectedRoute><AdminActivity /></AdminProtectedRoute>} />
+            <Route path="/admin/refill" element={<AdminProtectedRoute><AdminRefillTracker /></AdminProtectedRoute>} />
+            <Route path="/admin/medical-records" element={<AdminProtectedRoute><AdminMedicalRecords /></AdminProtectedRoute>} />
+            <Route path="/admin/notifications" element={<AdminProtectedRoute><AdminNotifications /></AdminProtectedRoute>} />
+            <Route path="/admin/reports" element={<AdminProtectedRoute><AdminReports /></AdminProtectedRoute>} />
+            <Route path="/admin/settings" element={<AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>} />
+            <Route path="/admin/profile" element={<AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
+
             {/* Fallback route */}
             <Route 
               path="*" 
-              element={<Navigate to={authService.isAuthenticated() ? "/dashboard" : "/login"} replace />} 
+              element={<Navigate to="/" replace />} 
             />
           </Routes>
         </main>
         
         {/* Global Floating AI Chatbot Assistant Widget */}
-        {user?.role === 'patient' && (
+        {(user?.role === 'patient' || user?.role === 'caregiver') && (
           <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
             {/* Chat Panel */}
             {chatOpen && (
@@ -176,8 +239,9 @@ function App() {
                 {/* Header */}
                 <div className="bg-gradient-to-r from-brand-600 to-indigo-600 p-4 text-white flex justify-between items-center shadow-md">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-white/10 rounded-xl">
-                      <Sparkles className="h-5 w-5 text-yellow-300 animate-spin-slow" />
+                    <div className="h-7 w-7 rounded-full ai-hologram-orb flex items-center justify-center relative shrink-0">
+                      <div className="absolute inset-0.5 rounded-full border border-white/35 animate-spin-slow" />
+                      <Sparkles className="h-3.5 w-3.5 text-white animate-pulse" />
                     </div>
                     <div>
                       <h4 className="text-sm font-black tracking-wide text-white">PillSync AI Assistant</h4>
@@ -261,11 +325,12 @@ function App() {
             {/* Toggle Button */}
             <button
               onClick={() => setChatOpen(!chatOpen)}
-              className="p-4 bg-gradient-to-r from-brand-600 to-indigo-600 hover:scale-105 active:scale-95 text-white rounded-full shadow-2xl transition-all flex items-center justify-center relative overflow-hidden"
+              className="h-14 w-14 rounded-full bg-white/80 backdrop-blur-md border border-white/60 shadow-2xl shadow-brand-500/10 flex items-center justify-center transition-all duration-300 hover:scale-105 hover:-translate-y-1 active:scale-95 relative"
               title="AI Health Assistant"
             >
-              <Sparkles className="absolute top-1 right-1 h-3.5 w-3.5 text-yellow-300 animate-pulse" />
-              <MessageSquare className="h-6 w-6" />
+              <div className={`h-10 w-10 rounded-full ai-hologram-orb flex items-center justify-center relative ${chatLoading ? 'animate-pulse' : ''}`}>
+                <Sparkles className="h-4.5 w-4.5 text-white animate-pulse" />
+              </div>
             </button>
           </div>
         )}

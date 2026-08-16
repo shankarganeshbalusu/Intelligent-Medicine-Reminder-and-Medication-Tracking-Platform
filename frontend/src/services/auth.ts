@@ -34,6 +34,24 @@ export const authService = {
     return authData;
   },
 
+  async googleSendOTP(email: string, role: string = 'patient'): Promise<any> {
+    const response = await api.post('/auth/google-send-otp', { email, role });
+    return response.data;
+  },
+
+  async googleVerifyOTP(email: string, otp_code: string, role: string = 'patient'): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/auth/google-verify-otp', { email, otp_code, role });
+    const authData = response.data;
+    
+    localStorage.setItem('pillsync_token', authData.access_token);
+    localStorage.setItem('pillsync_user_id', String(authData.user_id));
+    localStorage.setItem('pillsync_user_role', authData.role);
+    localStorage.setItem('pillsync_user_name', authData.name);
+    localStorage.setItem('pillsync_user_email', authData.email);
+    
+    return authData;
+  },
+
   async forgotPassword(email: string): Promise<any> {
     const response = await api.post('/auth/forgot-password', { email });
     return response.data;
@@ -44,12 +62,14 @@ export const authService = {
     return response.data;
   },
 
+  async verifyEmail(email: string, token: string): Promise<any> {
+    const response = await api.post('/auth/verify-email', { email, token });
+    return response.data;
+  },
+
   logout(): void {
-    localStorage.removeItem('pillsync_token');
-    localStorage.removeItem('pillsync_user_id');
-    localStorage.removeItem('pillsync_user_role');
-    localStorage.removeItem('pillsync_user_name');
-    localStorage.removeItem('pillsync_user_email');
+    localStorage.clear();
+    sessionStorage.clear();
   },
 
   isAuthenticated(): boolean {

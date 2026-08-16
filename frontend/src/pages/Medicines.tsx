@@ -17,7 +17,9 @@ import {
   X,
   FileText,
   Bell,
-  BellOff
+  BellOff,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 
 const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -252,11 +254,44 @@ export default function Medicines() {
     }
   };
 
+const RESTRICTED_SUBSTANCES = [
+  'cocaine',
+  'anesthesia',
+  'anesthetic',
+  'ketamine',
+  'propofol',
+  'fentanyl',
+  'morphine',
+  'oxycodone',
+  'hydrocodone',
+  'methadone',
+  'amphetamine',
+  'alprazolam',
+  'diazepam',
+  'lorazepam',
+  'clonazepam',
+  'etomidate',
+  'thiopental',
+  'midazolam'
+];
+
   const handleAddMedicine = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPatient) return;
     setSubmitting(true);
     setFormMessage({ text: '', type: '' });
+
+    // Block manual addition of controlled/anesthesia substances requiring doctor prescription
+    const normalizedName = name.toLowerCase().trim();
+    const foundRestricted = RESTRICTED_SUBSTANCES.find(substance => normalizedName.includes(substance));
+    if (foundRestricted) {
+      setFormMessage({
+        text: `Restricted Medicine Warning: "${name}" is a strictly controlled/anesthesia drug requiring an official doctor's prescription. Manual addition is prohibited. Please upload your doctor's prescription in the AI Scanner.`,
+        type: 'error'
+      });
+      setSubmitting(false);
+      return;
+    }
 
     // Validate duplicate custom times
     const uniqueTimes = new Set(customTimes.map(t => t.trim()));
@@ -315,15 +350,15 @@ export default function Medicines() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-8 animate-fade-in">
+    <div className="w-full max-w-5xl mx-auto space-y-8 animate-page-3d">
       {/* Header Panel */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyan-500/20 pb-5">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
-            <Pill className="h-6 w-6 text-brand-500" />
+          <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <Pill className="h-6 w-6 text-cyan-400" />
             Medicine Cabinet
           </h2>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-slate-300 text-sm font-semibold mt-1">
             {isPatient
               ? 'Manage your medication schedule and track inventory levels.'
               : "Monitor your linked patients' medicine cabinets."}
@@ -333,14 +368,14 @@ export default function Medicines() {
         {/* Caregiver Patient Dropdown selection */}
         {!isPatient && patients.length > 0 && (
           <div className="flex items-center gap-2">
-            <ListFilter className="h-4.5 w-4.5 text-slate-400" />
+            <ListFilter className="h-4.5 w-4.5 text-cyan-400" />
             <select
               value={selectedPatientId}
               onChange={(e) => handlePatientChange(parseInt(e.target.value))}
-              className="px-3.5 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-700 font-medium"
+              className="px-4 py-2 border border-cyan-500/30 rounded-xl text-sm bg-slate-900 text-white font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
             >
               {patients.map(p => (
-                <option key={p.id} value={p.patient_id}>
+                <option key={p.id} value={p.patient_id} className="bg-slate-900 text-white font-semibold">
                   {p.patient_name} ({p.patient_email})
                 </option>
               ))}
@@ -356,274 +391,300 @@ export default function Medicines() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Form to Add/Edit Medicine (Patients Only) */}
-          {isPatient && (
-            <div className="lg:col-span-1">
-              <div className="bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-6 shadow-xl shadow-slate-100/40 space-y-5 sticky top-24">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                  <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                    <Plus className="h-5 w-5 text-brand-500" />
+          {/* Left Column: Form to Add/Edit Medicine (Patient) OR Caregiver Inspection Info */}
+          <div className="lg:col-span-1">
+            {isPatient ? (
+              <div className="glass-card rounded-3xl p-6 border-cyan-500/20 bg-slate-900/90 backdrop-blur-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)] space-y-5 sticky top-24">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                  <h3 className="font-black text-white text-lg flex items-center gap-2">
+                    <Plus className="h-5 w-5 text-cyan-400" />
                     {isEditing ? 'Edit Medication' : 'Add Medication'}
                   </h3>
-                  {isEditing && (
-                    <button
-                      onClick={cancelEdit}
-                      className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
-                      title="Cancel Edit"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                {isEditing && (
+                  <button
+                    onClick={cancelEdit}
+                    className="p-1 text-slate-400 hover:text-cyan-300 hover:bg-slate-800 rounded-lg transition-all"
+                    title="Cancel Edit"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {formMessage.text && (
+                <div className={`p-3.5 rounded-xl border text-sm flex gap-2.5 ${
+                  formMessage.type === 'success'
+                    ? 'bg-green-500/20 border-green-500/40 text-green-300'
+                    : 'bg-red-500/20 border-red-500/40 text-red-300'
+                }`}>
+                  {formMessage.type === 'success' ? (
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-green-400" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
+                  )}
+                  <span>{formMessage.text}</span>
+                </div>
+              )}
+
+              {/* AI Prescription Upload scanner shortcut */}
+              {!isEditing && (
+                <div className="mb-4 bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-4 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.1)] mt-4">
+                  <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-cyan-500/10 font-black text-6xl pointer-events-none select-none">AI OCR</span>
+                  <FileText className="h-8 w-8 text-cyan-400 mb-2 animate-pulse" />
+                  <h4 className="text-xs font-black text-white">Scan Prescription with AI</h4>
+                  <p className="text-[10px] text-slate-300 font-semibold mt-0.5 mb-3 max-w-[240px]">
+                    Upload your prescription file or photo. Our AI will automatically extract details and fill out the form!
+                  </p>
+                  
+                  <label className="relative cursor-pointer py-2.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-black rounded-xl transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] flex items-center gap-1.5 cursor-pointer">
+                    {ocrLoading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>AI is parsing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-3.5 w-3.5" />
+                        <span>Select Image / PDF</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={ocrLoading}
+                      onChange={handlePrescriptionOCRUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              )}
+
+              <form onSubmit={handleAddMedicine} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-1.5">Medicine Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Metformin"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-cyan-500/30 rounded-xl text-sm bg-slate-900 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 transition-all font-semibold"
+                  />
+                  {["xanax", "alprazolam", "morphine", "oxycodone", "fentanyl", "adderall", "clonazepam", "tramadol", "diazepam", "lorazepam", "ritalin", "ketamine", "methadone", "codeine"].some(c => name.toLowerCase().includes(c)) && (
+                    <div className="mt-2 p-2.5 bg-amber-950/80 border border-amber-500/60 rounded-xl text-amber-200 text-[11px] font-bold flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                      <span>👨‍⚕️ Mandatory Doctor Prescription Required: This is a controlled prescription medicine. Please confirm valid doctor authorization.</span>
+                    </div>
                   )}
                 </div>
 
-                {formMessage.text && (
-                  <div className={`p-3.5 rounded-xl border text-sm flex gap-2.5 ${
-                    formMessage.type === 'success'
-                      ? 'bg-green-50 border-green-100 text-green-700'
-                      : 'bg-red-50 border-red-100 text-red-700'
-                  }`}>
-                    {formMessage.type === 'success' ? (
-                      <CheckCircle2 className="h-5 w-5 shrink-0" />
-                    ) : (
-                      <AlertCircle className="h-5 w-5 shrink-0" />
-                    )}
-                    <span>{formMessage.text}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2.5 px-0.5 py-1">
+                  <input
+                    type="checkbox"
+                    id="notifications_enabled"
+                    checked={notificationsEnabled}
+                    onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-cyan-500 cursor-pointer"
+                  />
+                  <label htmlFor="notifications_enabled" className="text-xs font-bold text-slate-200 select-none cursor-pointer">
+                    Enable Email Notifications for this medicine
+                  </label>
+                </div>
 
-                {/* AI Prescription Upload scanner */}
-                {isPatient && !isEditing && (
-                  <div className="mb-4 bg-gradient-to-r from-brand-50 to-indigo-50 border border-brand-100 rounded-2xl p-4 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-inner mt-4">
-                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-brand-500/5 font-black text-6xl pointer-events-none select-none">AI OCR</span>
-                    <FileText className="h-8 w-8 text-brand-500 mb-2 animate-pulse" />
-                    <h4 className="text-xs font-bold text-slate-800">Scan Prescription with AI</h4>
-                    <p className="text-[10px] text-slate-500 mt-0.5 mb-3 max-w-[240px]">
-                      Upload your prescription file or photo. Our AI will automatically extract details and fill out the form!
-                    </p>
-                    
-                    <label className="relative cursor-pointer py-2 px-4 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-brand-100/50 flex items-center gap-1.5 cursor-pointer">
-                      {ocrLoading ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>AI is parsing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-3.5 w-3.5" />
-                          <span>Select Image / PDF</span>
-                        </>
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        disabled={ocrLoading}
-                        onChange={handlePrescriptionOCRUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-1.5">Dosage strength</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 500mg or 1 tablet"
+                    value={dosage}
+                    onChange={(e) => setDosage(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-cyan-500/30 rounded-xl text-sm bg-slate-900 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 transition-all font-semibold"
+                  />
+                </div>
 
-                <form onSubmit={handleAddMedicine} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Medicine Name</label>
+                    <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-1.5">Stock Quantity</label>
                     <input
-                      type="text"
+                      type="number"
                       required
-                      placeholder="e.g. Metformin"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800"
+                      min="1"
+                      placeholder="e.g. 60"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      className="w-full px-3.5 py-2.5 border border-cyan-500/30 rounded-xl text-sm bg-slate-900 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 transition-all font-semibold"
                     />
                   </div>
-
-                  <div className="flex items-center gap-2 px-0.5 py-1">
-                    <input
-                      type="checkbox"
-                      id="notifications_enabled"
-                      checked={notificationsEnabled}
-                      onChange={(e) => setNotificationsEnabled(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                    />
-                    <label htmlFor="notifications_enabled" className="text-xs font-medium text-slate-700 select-none cursor-pointer">
-                      Enable Email Notifications for this medicine
-                    </label>
-                  </div>
-
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Dosage strength</label>
+                    <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-1.5">Duration (Days)</label>
                     <input
-                      type="text"
+                      type="number"
                       required
-                      placeholder="e.g. 500mg or 1 tablet"
-                      value={dosage}
-                      onChange={(e) => setDosage(e.target.value)}
-                      className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800"
+                      min="1"
+                      placeholder="e.g. 30"
+                      value={durationDays}
+                      onChange={(e) => setDurationDays(e.target.value)}
+                      className="w-full px-3.5 py-2.5 border border-cyan-500/30 rounded-xl text-sm bg-slate-900 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 transition-all font-semibold"
                     />
+                    <p className="text-[10px] text-cyan-400 font-semibold mt-1">Specify how many days you will take this medicine. Refill alerts trigger when 2 days remain.</p>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Stock Quantity</label>
-                      <input
-                        type="number"
-                        required
-                        min="1"
-                        placeholder="e.g. 60"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Duration (Days)</label>
-                      <input
-                        type="number"
-                        required
-                        min="1"
-                        placeholder="e.g. 30"
-                        value={durationDays}
-                        onChange={(e) => setDurationDays(e.target.value)}
-                        className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Schedule Frequency</label>
-                    <div className="flex gap-2 mb-2">
-                      <button
-                        type="button"
-                        onClick={() => { setScheduleType('Daily'); setSelectedDays(weekdays); }}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all ${
-                          scheduleType === 'Daily'
-                            ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        Daily
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setScheduleType('Specific Days')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all ${
-                          scheduleType === 'Specific Days'
-                            ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        Specific Days
-                      </button>
-                    </div>
-
-                    {scheduleType === 'Specific Days' && (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {weekdays.map((day) => {
-                          const isSelected = selectedDays.includes(day);
-                          const shortName = day.substring(0, 3);
-                          return (
-                            <button
-                              key={day}
-                              type="button"
-                              onClick={() => toggleDay(day)}
-                              className={`px-2 py-1 text-[11px] font-bold rounded-lg border transition-all ${
-                                isSelected
-                                  ? 'bg-brand-50 border-brand-200 text-brand-700 shadow-sm'
-                                  : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'
-                              }`}
-                            >
-                              {shortName}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Doses per Day</label>
-                    <select
-                      value={timesPerDay}
-                      onChange={(e) => handleTimesPerDayChange(parseInt(e.target.value))}
-                      className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-700"
-                    >
-                      <option value={1}>1 time daily</option>
-                      <option value={2}>2 times daily</option>
-                      <option value={3}>3 times daily</option>
-                      <option value={4}>4 times daily</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Food Relation</label>
-                    <select
-                      value={foodRelation}
-                      onChange={(e) => setFoodRelation(e.target.value)}
-                      className="w-full px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-750"
-                    >
-                      <option value="No Preference">No Preference</option>
-                      <option value="Before Food">Before Food</option>
-                      <option value="After Food">After Food</option>
-                      <option value="At Night">At Night</option>
-                    </select>
-
-                    <div className="mt-3 bg-slate-50 p-3.5 rounded-xl border border-slate-150 space-y-2">
-                      <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Manually Edit Dose Timings</span>
-                      <div className="grid grid-cols-2 gap-2">
-                        {customTimes.map((time, idx) => (
-                          <div key={idx} className="flex flex-col gap-0.5">
-                            <span className="text-[10px] text-slate-400 font-medium">Dose {idx + 1}</span>
-                            <input
-                              type="time"
-                              required
-                              value={time}
-                              onChange={(e) => handleTimeChange(idx, e.target.value)}
-                              className="w-full px-2.5 py-1 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-slate-800"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 pt-2">
+                <div>
+                  <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-1.5">Schedule Frequency</label>
+                  <div className="flex gap-2 mb-2">
                     <button
-                      type="submit"
-                      disabled={submitting}
-                      className="w-full py-2.5 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                      type="button"
+                      onClick={() => { setScheduleType('Daily'); setSelectedDays(weekdays); }}
+                      className={`flex-1 py-2 text-xs font-black rounded-xl border transition-all ${
+                        scheduleType === 'Daily'
+                          ? 'bg-gradient-to-r from-cyan-500 to-blue-600 border-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                          : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                      }`}
                     >
-                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                      {isEditing ? 'Save Changes' : 'Confirm & Schedule'}
+                      Daily
                     </button>
-
-                    {isEditing && (
-                      <button
-                        type="button"
-                        onClick={cancelEdit}
-                        className="w-full py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5"
-                      >
-                        Cancel
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setScheduleType('Specific Days')}
+                      className={`flex-1 py-2 text-xs font-black rounded-xl border transition-all ${
+                        scheduleType === 'Specific Days'
+                          ? 'bg-gradient-to-r from-cyan-500 to-blue-600 border-cyan-400 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                          : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      Specific Days
+                    </button>
                   </div>
-                </form>
-              </div>
+
+                  {scheduleType === 'Specific Days' && (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {weekdays.map((day) => {
+                        const isSelected = selectedDays.includes(day);
+                        const shortName = day.substring(0, 3);
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => toggleDay(day)}
+                            className={`px-2.5 py-1 text-[11px] font-black rounded-lg border transition-all ${
+                              isSelected
+                                ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                                : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
+                            }`}
+                          >
+                            {shortName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-1.5">Doses per Day</label>
+                  <select
+                    value={timesPerDay}
+                    onChange={(e) => handleTimesPerDayChange(parseInt(e.target.value))}
+                    className="w-full px-3.5 py-2.5 border border-cyan-500/30 rounded-xl text-sm bg-slate-900 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 font-semibold cursor-pointer"
+                  >
+                    <option value={1} className="bg-slate-900 text-white">1 time daily</option>
+                    <option value={2} className="bg-slate-900 text-white">2 times daily</option>
+                    <option value={3} className="bg-slate-900 text-white">3 times daily</option>
+                    <option value={4} className="bg-slate-900 text-white">4 times daily</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-cyan-300 uppercase tracking-wider mb-1.5">Food Relation</label>
+                  <select
+                    value={foodRelation}
+                    onChange={(e) => setFoodRelation(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-cyan-500/30 rounded-xl text-sm bg-slate-900 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-400 font-semibold cursor-pointer"
+                  >
+                    <option value="No Preference" className="bg-slate-900 text-white">No Preference</option>
+                    <option value="Before Food" className="bg-slate-900 text-white">Before Food</option>
+                    <option value="After Food" className="bg-slate-900 text-white">After Food</option>
+                    <option value="With Food" className="bg-slate-900 text-white">With Food</option>
+                  </select>
+                </div>
+
+                {/* Dynamic Time Picker Rows */}
+                {customTimes.map((t, idx) => (
+                  <div key={idx} className="bg-slate-900/80 border border-cyan-500/20 p-3 rounded-xl">
+                    <label className="block text-[11px] font-black text-cyan-300 uppercase tracking-wider mb-1">
+                      Dose {idx + 1} Time
+                    </label>
+                    <input
+                      type="time"
+                      value={t}
+                      onChange={(e) => handleTimeChange(idx, e.target.value)}
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-cyan-500/30 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-400 font-bold"
+                    />
+                  </div>
+                ))}
+
+                <div className="pt-2 space-y-2">
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 active:scale-95 text-white font-black text-sm rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {isEditing ? 'Save Changes' : 'Confirm & Schedule'}
+                  </button>
+
+                  {isEditing && (
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
             </div>
-          )}
+            ) : (
+              <div className="glass-card rounded-3xl p-6 border-cyan-500/20 bg-slate-900/90 backdrop-blur-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)] space-y-4 sticky top-24 text-white">
+                <div className="flex items-center space-x-3 text-cyan-400 border-b border-slate-800 pb-3">
+                  <Users className="h-6 w-6 shrink-0" />
+                  <div>
+                    <h3 className="font-black text-white text-base">Caregiver Mode</h3>
+                    <p className="text-[11px] text-cyan-300/80 font-semibold">Assigned Patient Cabinet Inspection</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-xs text-slate-300 space-y-2 leading-relaxed font-medium">
+                  <p className="text-white font-bold flex items-center gap-1.5">
+                    <span>ℹ️ Read-Only Cabinet View</span>
+                  </p>
+                  <p>
+                    Select an assigned patient from the dropdown above to inspect their active prescriptions, daily dose schedules, stock levels, and discontinuation logs.
+                  </p>
+                  <p className="text-[11px] text-slate-400 italic">
+                    Patients register their prescriptions from their own account.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Right Column: Medicines Inventory List */}
-          <div className={isPatient ? 'lg:col-span-2 space-y-4' : 'lg:col-span-3 space-y-4'}>
+          <div className="lg:col-span-2 space-y-4">
             {!isPatient && patients.length === 0 ? (
-              <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                <Users className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                <p className="text-sm font-medium text-slate-500">No linked patients</p>
-                <p className="text-xs text-slate-400 mt-1">Accept client connections in the profile to see their cabinets.</p>
+              <div className="glass-card rounded-3xl py-16 px-6 text-center border border-cyan-500/20 bg-slate-900/90 backdrop-blur-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)]">
+                <Users className="h-10 w-10 text-cyan-400 mx-auto mb-3 animate-pulse" />
+                <p className="text-base font-black text-white">No linked patients</p>
+                <p className="text-xs font-semibold text-slate-300 mt-1">Accept client connections in the profile to see their cabinets.</p>
               </div>
             ) : medicines.length === 0 ? (
-              <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                <Pill className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                <p className="text-sm font-medium text-slate-500">No medications logged</p>
-                <p className="text-xs text-slate-400 mt-1">
+              <div className="glass-card rounded-3xl py-16 px-6 text-center border border-cyan-500/20 bg-slate-900/90 backdrop-blur-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)]">
+                <Pill className="h-10 w-10 text-cyan-400 mx-auto mb-3 animate-pulse" />
+                <p className="text-base font-black text-white">No medications logged</p>
+                <p className="text-xs font-semibold text-slate-300 mt-1">
                   {isPatient
                     ? 'Start by inputting your first prescription details.'
                     : 'The patient has not added any medications yet.'}
@@ -632,36 +693,38 @@ export default function Medicines() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {medicines.map((med) => (
-                  <div key={med.id} className="bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-5 shadow-xl shadow-slate-100/40 flex flex-col justify-between gap-4 hover:shadow-2xl hover:border-white transition-all duration-200">
+                  <div key={med.id} className="glass-card rounded-2xl p-5 flex flex-col justify-between gap-4 transition-all duration-300 med-card-3d">
                     <div>
                       <div className="flex justify-between items-start">
-                        <div className="p-2 bg-brand-50 rounded-xl text-brand-600">
-                          <Pill className="h-5 w-5" />
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100/60 rounded-xl med-card-3d-pop shrink-0 flex items-center justify-center relative shadow-sm">
+                          <div className="w-5 h-2.5 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 rotate-12 relative flex items-center justify-between px-0.5">
+                            <div className="w-2 h-1.5 bg-white/30 rounded-full" />
+                          </div>
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${
+                          <span className={`text-xs px-2.5 py-0.5 rounded-full font-black border uppercase tracking-wider ${
                             med.quantity > 10
-                              ? 'bg-green-50 border-green-100 text-green-700'
+                              ? 'bg-green-500/20 border-green-500/40 text-green-300'
                               : med.quantity > 0
-                              ? 'bg-amber-50 border-amber-100 text-amber-700'
-                              : 'bg-red-50 border-red-100 text-red-700'
+                              ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                              : 'bg-red-500/20 border-red-500/40 text-red-300'
                           }`}>
                             {med.quantity} remaining
                           </span>
 
                           {isPatient && (
-                            <div className="flex items-center gap-1 border-l border-slate-100 pl-2">
+                            <div className="flex items-center gap-1 border-l border-cyan-500/30 pl-2">
                               <button
                                 onClick={() => startEditMedicine(med)}
-                                className="p-1 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded transition-all"
+                                className="p-1.5 text-cyan-400 hover:text-cyan-200 hover:bg-slate-800 rounded-lg transition-all"
                                 title="Edit Medication"
                               >
                                 <Edit3 className="h-3.5 w-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteMedicine(med.id)}
-                                className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                                className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-all"
                                 title="Delete Medication"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -671,63 +734,84 @@ export default function Medicines() {
                         </div>
                       </div>
                       
-                      <h4 className="text-base font-bold text-slate-800 mt-3">{med.name}</h4>
-                      <p className="text-slate-400 text-xs mt-0.5">Strength: {med.dosage}</p>
+                      {/* Prominent Brand Name + Muted Generic Name */}
+                      <div className="mt-3">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <h4 className="text-lg font-black text-white tracking-tight med-card-3d-pop">{med.name}</h4>
+                          <span className="text-xs font-extrabold text-cyan-300 bg-cyan-500/20 border border-cyan-500/40 px-2 py-0.5 rounded-md shrink-0">
+                            {med.dosage}
+                          </span>
+                        </div>
+                        {med.generic_name && (
+                          <p className="text-cyan-200 text-xs font-semibold mt-0.5 font-mono">
+                            Formula: {med.generic_name}
+                          </p>
+                        )}
+                      </div>
                       
-                      {/* Food Relation Warning - Extremely Prominent for mothers/caregivers to read */}
-                      <div className="mt-3 flex items-center gap-2 text-xs font-bold bg-slate-50 border border-slate-100 p-2.5 rounded-xl text-slate-700">
-                        <span className="text-sm">🍽️</span>
-                        <span>Intake Advice:</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                      {/* Food Relation Warning */}
+                      <div className="mt-3 flex items-center justify-between gap-2 text-xs font-bold bg-slate-900/80 border border-cyan-500/20 p-2.5 rounded-xl text-slate-200 med-card-3d-pop">
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-sm">🍽️</span>
+                          <span>Intake Advice:</span>
+                        </span>
+                        <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
                           med.food_relation?.toLowerCase().includes('before')
-                            ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                             : med.food_relation?.toLowerCase().includes('after')
-                            ? 'bg-green-100 text-green-700 border border-green-200'
-                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            ? 'bg-green-500/20 text-green-300 border border-green-500/40'
+                            : 'bg-slate-800 text-slate-300 border border-slate-700'
                         }`}>
                           {med.food_relation || 'No Preference'}
                         </span>
                       </div>
                       
                       {med.days_of_week && med.days_of_week !== 'Daily' && (
-                        <p className="text-brand-600 text-[10px] font-bold mt-2.5 uppercase tracking-wider">
+                        <p className="text-cyan-400 text-[10px] font-bold mt-2.5 uppercase tracking-wider">
                           Days: {med.days_of_week.split(',').map(d => d.substring(0,3)).join(', ')}
                         </p>
                       )}
                       {med.custom_times && (
-                        <p className="text-slate-500 text-[10px] font-semibold mt-1">
-                          Timings: {med.custom_times.split(',').map(formatTimeToShow).join(', ')}
+                        <p className="text-slate-300 text-[11px] font-semibold mt-1 flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-cyan-400" />
+                          <span>Timings: {med.custom_times.split(',').map(formatTimeToShow).join(', ')}</span>
                         </p>
                       )}
                     </div>
 
-                    <div className="border-t border-slate-100 pt-3.5 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                    <div className="border-t border-cyan-500/20 pt-3.5 flex items-center justify-between text-xs text-slate-200 font-bold">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="h-4 w-4 text-slate-400" />
+                        <Calendar className="h-4 w-4 text-cyan-400" />
                         <span>{med.duration_days} days schedule</span>
                       </div>
-                      <div className="text-right font-medium text-slate-700 capitalize">
+                      <div className="text-right font-black text-cyan-300 capitalize">
                         {med.days_of_week && med.days_of_week !== 'Daily' ? 'Weekly' : 'Daily'} ({med.times_per_day}x)
                       </div>
                     </div>
 
                     {isPatient && (
-                      <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
-                        <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
-                          {med.notifications_enabled !== false ? <Bell className="h-3 w-3 text-sky-500" /> : <BellOff className="h-3 w-3 text-slate-400" />}
-                          Email Alerts:
+                      <div className="border-t border-cyan-500/20 pt-3 flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold text-slate-200 flex items-center gap-1.5">
+                          {med.notifications_enabled !== false ? <Bell className="h-3.5 w-3.5 text-cyan-400" /> : <BellOff className="h-3.5 w-3.5 text-slate-500" />}
+                          Email Notifications:
                         </span>
-                        <button
-                          onClick={() => toggleNotifications(med)}
-                          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all border ${
-                            med.notifications_enabled !== false
-                              ? 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'
-                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                          }`}
-                          title={med.notifications_enabled !== false ? "Click to disable notifications" : "Click to enable notifications"}
-                        >
-                          <span>{med.notifications_enabled !== false ? 'Enabled (ON)' : 'Disabled (OFF)'}</span>
-                        </button>
+                        
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${med.notifications_enabled !== false ? 'text-cyan-300' : 'text-slate-400'}`}>
+                            {med.notifications_enabled !== false ? 'ON' : 'OFF'}
+                          </span>
+                          <button
+                            onClick={() => toggleNotifications(med)}
+                            className={`relative inline-flex items-center medical-toggle-track ${
+                              med.notifications_enabled !== false ? 'on' : 'off'
+                            }`}
+                            title={med.notifications_enabled !== false ? "Click to disable notifications" : "Click to enable notifications"}
+                          >
+                            <span className={`inline-block w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${
+                              med.notifications_enabled !== false ? 'translate-x-5' : 'translate-x-1'
+                            }`} />
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

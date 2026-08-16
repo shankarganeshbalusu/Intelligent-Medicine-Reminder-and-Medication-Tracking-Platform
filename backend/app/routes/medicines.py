@@ -80,11 +80,25 @@ def create_medicine(
     current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db)
 ):
+    if current_user.role == "caregiver":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Caregivers have read-only access to patient medicine cabinets. Patients must register their prescriptions from their own account."
+        )
+
     from app.ai_service import verify_medicine_with_ai
+    banned_list = ["cocaine", "coca", "heroin", "methamphetamine", "meth", "crystal meth", "lsd", "acid", "ecstasy", "mdma", "weed", "marijuana", "cannabis", "hashish", "crack", "pcp", "angel dust", "magic mushroom", "psilocybin", "speed", "opium", "fentanyl street", "ghb", "rohypnol"]
+    name_check = medicine_in.name.strip().lower()
+    if any(b in name_check for b in banned_list):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"❌ Rejected: '{medicine_in.name}' is an illegal substance and cannot be added to a medical cabinet. Only valid doctor-prescribed medications are permitted."
+        )
+
     if not verify_medicine_with_ai(medicine_in.name):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"This medicine '{medicine_in.name}' is unrecognized or fake. Please enter a valid, medically recognized name."
+            detail=f"❌ Unrecognized Medication: '{medicine_in.name}' is not a medically recognized prescription or OTC pharmaceutical. Please check the spelling or enter a valid doctor-prescribed medicine."
         )
 
     normalized_custom_times = None
@@ -114,11 +128,47 @@ def create_medicine(
     generate_reminders_for_medicine(db, db_medicine, start_date, end_date)
     db.commit()
     
+    # Direct & immediate automatic refill email dispatch if created in red zone (<= 2 days or <= 2 pills left)
+    try:
+        check_and_trigger_critical_refill_emails(current_user, [db_medicine])
+    except Exception as email_err:
+        print(f"[REFILL ALERT EMAIL WARNING] {email_err}")
+    
     return db_medicine
+
+def check_and_trigger_critical_refill_emails(user: models.User, medicines: List[models.Medicine]):
+    """Automatically checks all medicines for a user. If any medicine reaches <= 2 days left OR <= 2 pills left (critical red status), dispatches the refill email directly and immediately."""
+    for med in medicines:
+        times_per_day = med.times_per_day if med.times_per_day > 0 else 1
+        days_left = med.quantity // times_per_day
+        if days_left <= 2 or med.quantity <= 2:
+            try:
+                from app.email_worker import send_refill_alert_email
+                target_emails = set()
+                if user.email:
+                    target_emails.add(user.email.strip().lower())
+                if user.notification_email:
+                    target_emails.add(user.notification_email.strip().lower())
+
+                for target_email in target_emails:
+                    send_refill_alert_email(
+                        to_email=target_email,
+                        patient_name=user.name,
+                        medicine_name=med.name,
+                        dosage=med.dosage,
+                        quantity_left=med.quantity,
+                        days_left=days_left,
+                        medicine_id=med.id
+                    )
+                    print(f"[AUTOMATIC RED ZONE REFILL MAIL DISPATCHED] to {target_email} for {med.name} (Pills: {med.quantity}, Days: {days_left})")
+            except Exception as err:
+                print(f"[AUTOMATIC REFILL DIRECT EMAIL ERROR] {err}")
+
 
 @router.get("", response_model=List[schemas.MedicineResponse])
 def get_medicines(
     patient_id: Optional[int] = None,
+    include_archived: bool = False,
     current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -135,10 +185,19 @@ def get_medicines(
                 detail="You do not have access to view this patient's medicines"
             )
         user_id = patient_id
+        target_user = db.query(models.User).filter(models.User.id == patient_id).first()
     else:
         user_id = current_user.id
+        target_user = current_user
 
-    return db.query(models.Medicine).filter(models.Medicine.user_id == user_id).all()
+    query = db.query(models.Medicine).filter(models.Medicine.user_id == user_id)
+    if not include_archived:
+        query = query.filter(models.Medicine.is_archived == False)
+
+    user_meds = query.all()
+    if target_user:
+        check_and_trigger_critical_refill_emails(target_user, user_meds)
+    return user_meds
 
 @router.get("/reminders/today", response_model=List[schemas.ReminderResponse])
 def get_today_reminders(
@@ -166,6 +225,7 @@ def get_today_reminders(
     
     db_reminders = db.query(models.Reminder).join(models.Medicine).filter(
         models.Medicine.user_id == user_id,
+        models.Medicine.is_archived == False,
         models.Reminder.reminder_date == today_start
     ).all()
 
@@ -232,6 +292,68 @@ def update_reminder_status(
     db.commit()
     db.refresh(reminder)
 
+    # If marked missed, send missed alert email STRICTLY TO CAREGIVER ONLY
+    if status_update == "missed":
+        try:
+            patient = reminder.medicine.user
+            caregiver_link = db.query(models.PatientCaregiver).filter(
+                models.PatientCaregiver.patient_id == patient.id,
+                models.PatientCaregiver.status == "active"
+            ).first()
+
+            if reminder.medicine.notifications_enabled and caregiver_link and caregiver_link.caregiver:
+                cg = caregiver_link.caregiver
+                cg_email = cg.email.strip().lower() if cg.email else None
+                if cg_email:
+                    from app.email_worker import send_email_notification, LOGIN_URL
+                    subject_cg_missed = f"PillSync — Missed Medication Alert for {patient.name}"
+                    html_cg_missed = f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                      <h2 style="color: #ef4444; margin-bottom: 16px;">⚠️ PillSync — Missed Medication Alert</h2>
+                      <p style="color: #475569; font-size: 14px; line-height: 1.5;">Hello <strong>{cg.name}</strong>,</p>
+                      <p style="color: #475569; font-size: 14px; line-height: 1.5;">Your monitored patient <strong>{patient.name}</strong> has missed their scheduled medication dosage.</p>
+                      
+                      <div style="background-color: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                        <p style="margin: 4px 0; color: #991b1b; font-size: 15px;"><strong>Patient:</strong> {patient.name}</p>
+                        <p style="margin: 4px 0; color: #991b1b; font-size: 14px;"><strong>Medicine:</strong> {reminder.medicine.name}</p>
+                        <p style="margin: 4px 0; color: #991b1b; font-size: 14px;"><strong>Dosage:</strong> {reminder.medicine.dosage}</p>
+                        <p style="margin: 4px 0; color: #991b1b; font-size: 14px;"><strong>Scheduled Time:</strong> {reminder.dose_time} on {reminder.reminder_date.strftime('%Y-%m-%d')}</p>
+                        <p style="margin: 8px 0 0 0; color: #7f1d1d; font-size: 14px; font-weight: bold;">Alert: Patient missed this scheduled medicine or dosage.</p>
+                      </div>
+                      
+                      <p style="color: #475569; font-size: 14px; line-height: 1.5;">Suggested Action: Please check in with {patient.name} to confirm adherence.</p>
+
+                      <p style="margin: 24px 0; text-align: left;">
+                        <a href="{LOGIN_URL}" style="background-color: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);">Open PillSync Login Page</a>
+                      </p>
+                      
+                      <p style="color: #64748b; font-size: 12px; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 24px;">PillSync Caregiver Tracking Engine</p>
+                    </div>
+                    """
+                    send_email_notification(cg_email, subject_cg_missed, html_cg_missed)
+        except Exception as e:
+            print(f"[CAREGIVER MISSED EMAIL ERROR] {e}")
+
+    # Check if stock has reached 2 days or fewer left after taking dose
+    if status_update == "taken":
+        try:
+            med = reminder.medicine
+            times_per_day = med.times_per_day if med.times_per_day > 0 else 1
+            days_left = med.quantity // times_per_day
+            if days_left <= 2 and med.notifications_enabled:
+                from app.email_worker import send_refill_alert_email
+                target_email = current_user.notification_email or current_user.email
+                send_refill_alert_email(
+                    to_email=target_email.strip().lower(),
+                    patient_name=current_user.name,
+                    medicine_name=med.name,
+                    dosage=med.dosage,
+                    quantity_left=med.quantity,
+                    days_left=days_left
+                )
+        except Exception as refill_err:
+            print(f"[REFILL ALERT EMAIL WARNING] {refill_err}")
+
     return {
         "id": reminder.id,
         "medicine_id": reminder.medicine_id,
@@ -242,6 +364,79 @@ def update_reminder_status(
         "medicine_name": reminder.medicine.name,
         "medicine_dosage": reminder.medicine.dosage
     }
+
+
+@router.post("/{medicine_id}/refill", response_model=schemas.MedicineResponse)
+def refill_medicine_stock(
+    medicine_id: int,
+    additional_days: int = 30,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    medicine = db.query(models.Medicine).filter(models.Medicine.id == medicine_id).first()
+    if not medicine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medicine not found"
+        )
+    if medicine.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to refill this medicine"
+        )
+
+    times_per_day = medicine.times_per_day if medicine.times_per_day > 0 else 1
+    added_units = additional_days * times_per_day
+    
+    medicine.quantity += added_units
+    medicine.duration_days += additional_days
+    
+    today = datetime.date.today()
+    end_date = today + datetime.timedelta(days=additional_days)
+    generate_reminders_for_medicine(db, medicine, today, end_date)
+    
+    from app.email_worker import reset_refill_alert_tracker
+    reset_refill_alert_tracker(medicine_id)
+    
+    db.commit()
+    db.refresh(medicine)
+    return medicine
+
+
+@router.post("/{medicine_id}/send-refill-email", status_code=status.HTTP_200_OK)
+def trigger_manual_refill_email(
+    medicine_id: int,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    medicine = db.query(models.Medicine).filter(models.Medicine.id == medicine_id).first()
+    if not medicine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medicine not found"
+        )
+    if medicine.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to send alerts for this medicine"
+        )
+
+    times_per_day = medicine.times_per_day if medicine.times_per_day > 0 else 1
+    days_left = medicine.quantity // times_per_day
+    target_email = (current_user.notification_email or current_user.email).strip().lower()
+
+    from app.email_worker import send_refill_alert_email
+    send_refill_alert_email(
+        to_email=target_email,
+        patient_name=current_user.name,
+        medicine_name=medicine.name,
+        dosage=medicine.dosage,
+        quantity_left=medicine.quantity,
+        days_left=days_left,
+        medicine_id=medicine.id,
+        force_send=True
+    )
+    return {"status": f"Refill email successfully dispatched to {target_email}!"}
 
 @router.get("/medication-logs", response_model=List[schemas.MedicationLogResponse])
 def get_medication_logs(
@@ -271,13 +466,15 @@ def get_medication_logs(
     
     res = []
     for l in logs:
+        if not l.reminder or not l.reminder.medicine or l.reminder.medicine.is_archived:
+            continue
         res.append({
             "id": l.id,
             "reminder_id": l.reminder_id,
             "user_id": l.user_id,
             "status": l.status,
             "logged_at": l.logged_at,
-            "medicine_name": l.reminder.medicine.name if l.reminder else "Unknown",
+            "medicine_name": l.reminder.medicine.name,
             "dose_time": l.reminder.dose_time if l.reminder else "Unknown"
         })
     return res
@@ -302,10 +499,18 @@ def update_medicine(
         )
 
     from app.ai_service import verify_medicine_with_ai
+    banned_list = ["cocaine", "coca", "heroin", "methamphetamine", "meth", "crystal meth", "lsd", "acid", "ecstasy", "mdma", "weed", "marijuana", "cannabis", "hashish", "crack", "pcp", "angel dust", "magic mushroom", "psilocybin", "speed", "opium", "fentanyl street", "ghb", "rohypnol"]
+    name_check = medicine_in.name.strip().lower()
+    if any(b in name_check for b in banned_list):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"❌ Rejected: '{medicine_in.name}' is an illegal substance and cannot be added to a medical cabinet. Only valid doctor-prescribed medications are permitted."
+        )
+
     if not verify_medicine_with_ai(medicine_in.name):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"This medicine '{medicine_in.name}' is unrecognized or fake. Please enter a valid, medically recognized name."
+            detail=f"❌ Unrecognized Medication: '{medicine_in.name}' is not a medically recognized prescription or OTC pharmaceutical. Please check the spelling or enter a valid doctor-prescribed medicine."
         )
 
     medicine.name = medicine_in.name
@@ -337,11 +542,16 @@ def update_medicine(
 
     db.commit()
     db.refresh(medicine)
+    
+    # Direct & immediate automatic refill email dispatch if updated stock is in red zone
+    check_and_trigger_critical_refill_emails(current_user, [medicine])
+    
     return medicine
 
 @router.delete("/{medicine_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_medicine(
     medicine_id: int,
+    reason: Optional[str] = "Discontinued / Removed",
     current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -357,7 +567,22 @@ def delete_medicine(
             detail="You do not have permission to delete this medicine"
         )
 
-    db.delete(medicine)
+    # Get all reminder IDs for this medicine to purge logs
+    reminders = db.query(models.Reminder).filter(models.Reminder.medicine_id == medicine_id).all()
+    reminder_ids = [r.id for r in reminders]
+
+    if reminder_ids:
+        db.query(models.MedicationLog).filter(models.MedicationLog.reminder_id.in_(reminder_ids)).delete(synchronize_session=False)
+
+    db.query(models.Reminder).filter(models.Reminder.medicine_id == medicine_id).delete()
+
+    reason_clean = (reason or "").lower()
+    if any(k in reason_clean for k in ["mistake", "void", "incorrect", "accidental", "typo", "delete", "remove"]):
+        db.delete(medicine)
+    else:
+        medicine.discontinue_reason = reason if reason else "Discontinued / Removed"
+        medicine.is_archived = True
+
     db.commit()
     return None
 
@@ -379,18 +604,12 @@ def check_interactions(
     db: Session = Depends(get_db)
 ):
     active_meds = db.query(models.Medicine).filter(models.Medicine.user_id == current_user.id).all()
+    if len(active_meds) <= 1:
+        return {"warnings": []}
+
     med_names = [m.name for m in active_meds]
-    
     from app.ai_service import check_drug_interactions
-    all_warnings = []
-    
-    for i, med in enumerate(active_meds):
-        others = med_names[:i] + med_names[i+1:]
-        warnings = check_drug_interactions(med.name, others)
-        for w in warnings:
-            if not any(x["warning"] == w["warning"] for x in all_warnings):
-                all_warnings.append(w)
-                
-    return {"warnings": all_warnings}
+    warnings = check_drug_interactions(med_names[0], med_names[1:])
+    return {"warnings": warnings}
 
 

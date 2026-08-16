@@ -38,6 +38,7 @@ class ProfileUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     notification_email: Optional[EmailStr] = None
+    role: Optional[str] = None
 
 # Caregiver Patient Link schemas
 class CaregiverLinkCreate(BaseModel):
@@ -92,6 +93,8 @@ class MedicineResponse(BaseModel):
     source: str
     food_relation: Optional[str] = "No Preference"
     notifications_enabled: bool
+    is_archived: Optional[bool] = False
+    discontinue_reason: Optional[str] = None
     created_at: datetime.datetime
 
     class Config:
@@ -127,9 +130,23 @@ class MedicationLogResponse(BaseModel):
 
 
 class GoogleAuthRequest(BaseModel):
+    email: Optional[EmailStr] = None
+    name: Optional[str] = None
+    role: Optional[str] = "patient"
+    credential: Optional[str] = None
+
+class GoogleSendOTPRequest(BaseModel):
     email: EmailStr
-    name: str
-    role: str
+    role: Optional[str] = "patient"
+
+class GoogleVerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
+    role: Optional[str] = "patient"
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    token: str
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -181,3 +198,30 @@ class InteractionWarning(BaseModel):
 
 class InteractionCheckResponse(BaseModel):
     warnings: List[InteractionWarning]
+
+
+# Emergency Info Schemas
+class EmergencyInfoBase(BaseModel):
+    blood_group: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    relationship: Optional[str] = None
+    allergies: Optional[str] = None
+    medical_conditions: Optional[str] = None
+    important_notes: Optional[str] = None
+    doctor_name: Optional[str] = None
+    doctor_phone: Optional[str] = None
+
+class EmergencyInfoCreate(EmergencyInfoBase):
+    pass
+
+class EmergencyInfoResponse(EmergencyInfoBase):
+    id: Optional[int] = None
+    user_id: Optional[int] = None
+    patient_name: Optional[str] = None
+    patient_email: Optional[str] = None
+    updated_at: Optional[datetime.datetime] = None
+
+    class Config:
+        from_attributes = True
+
