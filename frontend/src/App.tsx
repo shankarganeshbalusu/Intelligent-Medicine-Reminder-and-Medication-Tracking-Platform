@@ -231,7 +231,7 @@ function App() {
         </main>
         
         {/* Global Floating AI Chatbot Assistant Widget */}
-        {user?.role === 'patient' && (
+        {(user?.role === 'patient' || user?.role === 'caregiver') && (
           <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
             {/* Chat Panel */}
             {chatOpen && (
