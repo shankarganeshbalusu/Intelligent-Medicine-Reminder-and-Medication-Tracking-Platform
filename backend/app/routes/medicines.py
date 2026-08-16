@@ -80,6 +80,12 @@ def create_medicine(
     current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db)
 ):
+    if current_user.role == "caregiver":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Caregivers have read-only access to patient medicine cabinets. Patients must register their prescriptions from their own account."
+        )
+
     from app.ai_service import verify_medicine_with_ai
     banned_list = ["cocaine", "coca", "heroin", "methamphetamine", "meth", "crystal meth", "lsd", "acid", "ecstasy", "mdma", "weed", "marijuana", "cannabis", "hashish", "crack", "pcp", "angel dust", "magic mushroom", "psilocybin", "speed", "opium", "fentanyl street", "ghb", "rohypnol"]
     name_check = medicine_in.name.strip().lower()

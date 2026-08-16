@@ -17,6 +17,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { medicinesService } from '../services/medicines';
+import { authService } from '../services/auth';
 
 interface ExtractedMedicine {
   name: string;
@@ -50,6 +51,27 @@ export default function PrescriptionOCR() {
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const navigate = useNavigate();
+
+  const currentUser = authService.getCurrentUser();
+  if (currentUser?.role === 'caregiver') {
+    return (
+      <div className="w-full max-w-xl mx-auto py-16 px-6 text-center space-y-5 glass-card rounded-3xl border border-cyan-500/20 bg-slate-900/90 backdrop-blur-2xl text-white shadow-2xl my-8">
+        <div className="h-16 w-16 bg-cyan-500/20 text-cyan-400 rounded-3xl border border-cyan-500/30 flex items-center justify-center mx-auto shadow-lg">
+          <FileText className="h-8 w-8" />
+        </div>
+        <h2 className="text-2xl font-black tracking-tight text-white">Prescription AI Scanner</h2>
+        <p className="text-xs text-slate-300 font-semibold leading-relaxed max-w-md mx-auto">
+          Prescription OCR scanning is available on Patient portals to allow patients to scan and register their prescriptions directly into their medicine cabinet.
+        </p>
+        <button
+          onClick={() => navigate('/medicines')}
+          className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all cursor-pointer"
+        >
+          View Patient Cabinets
+        </button>
+      </div>
+    );
+  }
 
   // Edit states for review list
   const [editingIndex, setEditingIndex] = useState<number | null>(null);

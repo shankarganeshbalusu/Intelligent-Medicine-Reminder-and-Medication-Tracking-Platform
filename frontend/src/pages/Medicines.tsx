@@ -391,14 +391,15 @@ const RESTRICTED_SUBSTANCES = [
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Form to Add/Edit Medicine (Manual Entry) */}
+          {/* Left Column: Form to Add/Edit Medicine (Patient) OR Caregiver Inspection Info */}
           <div className="lg:col-span-1">
-            <div className="glass-card rounded-3xl p-6 border-cyan-500/20 bg-slate-900/90 backdrop-blur-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)] space-y-5 sticky top-24">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 className="font-black text-white text-lg flex items-center gap-2">
-                  <Plus className="h-5 w-5 text-cyan-400" />
-                  {isEditing ? 'Edit Medication' : 'Add Medication'}
-                </h3>
+            {isPatient ? (
+              <div className="glass-card rounded-3xl p-6 border-cyan-500/20 bg-slate-900/90 backdrop-blur-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)] space-y-5 sticky top-24">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                  <h3 className="font-black text-white text-lg flex items-center gap-2">
+                    <Plus className="h-5 w-5 text-cyan-400" />
+                    {isEditing ? 'Edit Medication' : 'Add Medication'}
+                  </h3>
                 {isEditing && (
                   <button
                     onClick={cancelEdit}
@@ -646,6 +647,29 @@ const RESTRICTED_SUBSTANCES = [
                 </div>
               </form>
             </div>
+            ) : (
+              <div className="glass-card rounded-3xl p-6 border-cyan-500/20 bg-slate-900/90 backdrop-blur-2xl shadow-[0_0_30px_rgba(6,182,212,0.15)] space-y-4 sticky top-24 text-white">
+                <div className="flex items-center space-x-3 text-cyan-400 border-b border-slate-800 pb-3">
+                  <Users className="h-6 w-6 shrink-0" />
+                  <div>
+                    <h3 className="font-black text-white text-base">Caregiver Mode</h3>
+                    <p className="text-[11px] text-cyan-300/80 font-semibold">Assigned Patient Cabinet Inspection</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-xs text-slate-300 space-y-2 leading-relaxed font-medium">
+                  <p className="text-white font-bold flex items-center gap-1.5">
+                    <span>ℹ️ Read-Only Cabinet View</span>
+                  </p>
+                  <p>
+                    Select an assigned patient from the dropdown above to inspect their active prescriptions, daily dose schedules, stock levels, and discontinuation logs.
+                  </p>
+                  <p className="text-[11px] text-slate-400 italic">
+                    Patients register their prescriptions from their own account.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column: Medicines Inventory List */}

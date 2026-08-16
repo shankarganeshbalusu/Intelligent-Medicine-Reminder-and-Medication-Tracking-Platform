@@ -41,12 +41,14 @@ export default function Sidebar({ user, onLogout, onAskAI }: SidebarProps) {
     navigate('/login');
   };
 
+  const isPatient = user?.role === 'patient';
+
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, color: 'text-cyan-400' },
-    { label: 'Cabinet', path: '/medicines', icon: Pill, color: 'text-blue-400' },
+    { label: isPatient ? 'Cabinet' : 'Patient Cabinets', path: '/medicines', icon: Pill, color: 'text-blue-400' },
     { label: 'Refill Tracker', path: '/refill', icon: RefreshCw, color: 'text-amber-400' },
     { label: 'Medical Records', path: '/medical-records', icon: FileText, color: 'text-emerald-400' },
-    { label: 'AI Scanner', path: '/prescription-ocr', icon: Scan, color: 'text-purple-400' },
+    ...(isPatient ? [{ label: 'AI Scanner', path: '/prescription-ocr', icon: Scan, color: 'text-purple-400' }] : []),
     { label: 'Report Analysis', path: '/history', icon: BarChart3, color: 'text-indigo-400' },
     { label: 'Settings', path: '/profile', icon: Settings, color: 'text-slate-300' },
   ];
