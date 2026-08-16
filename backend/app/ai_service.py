@@ -261,68 +261,106 @@ def check_drug_interactions(new_med_name: str, existing_med_names: List[str]) ->
     return warnings
 
 
-def get_chatbot_response(message: str, patient_name: str, active_medicines: List[str], compliance_score: int) -> str:
-    """Invokes Gemini LLM for conversational medical advice, with fallback simulator."""
-    meds_str = ", ".join(active_medicines) if active_medicines else "no active medications"
-    
+def get_chatbot_response(
+    message: str,
+    user_name: str,
+    user_role: str = "patient",
+    medicine_details: Optional[List[Dict]] = None,
+    emergency_details: Optional[List[Dict]] = None,
+    compliance_score: int = 100
+) -> str:
+    """Invokes Gemini LLM for conversational medical advice with complete Medicine Card and Emergency Info Card context."""
+    medicine_details = medicine_details or []
+    emergency_details = emergency_details or []
+
+    # Build rich medicine cards text
+    if medicine_details:
+        meds_lines = []
+        for m in medicine_details:
+            p_prefix = f"[Patient: {m['patient_name']}] " if "patient_name" in m else ""
+            meds_lines.append(
+                f"- {p_prefix}Medicine: {m.get('name')} ({m.get('dosage')}), Quantity Left: {m.get('quantity')}, "
+                f"Frequency: {m.get('times_per_day')}x daily, Intake Advice: {m.get('food_relation')}, "
+                f"Timings: {m.get('custom_times')}, Duration: {m.get('duration_days')} days"
+            )
+        meds_text = "\n".join(meds_lines)
+    else:
+        meds_text = "No active medicines registered in Cabinet."
+
+    # Build rich emergency card text
+    if emergency_details:
+        emg_lines = []
+        for e in emergency_details:
+            emg_lines.append(
+                f"- Patient Name: {e.get('patient_name')}, Blood Group: 🩸 {e.get('blood_group')}, "
+                f"Emergency Contact: 📞 {e.get('emergency_contact_name')} ({e.get('relationship')}) - {e.get('emergency_contact_phone')}, "
+                f"Allergies: ⚠️ {e.get('allergies')}, Medical Conditions: 🏥 {e.get('medical_conditions')}, "
+                f"Doctor: 🩺 {e.get('doctor_name')} ({e.get('doctor_phone')}), Notes: {e.get('important_notes')}"
+            )
+        emg_text = "\n".join(emg_lines)
+    else:
+        emg_text = "No emergency information recorded."
+
     system_context = (
-        f"You are the PillSync AI Health Assistant. You are advising a patient named {patient_name}. "
-        f"The patient is currently scheduled for these medications: {meds_str}. "
-        f"Their compliance rate is {compliance_score}% (based on taken vs missed doses). "
-        f"Give concise, friendly, health-supportive guidance. Do not prescribe drugs. Suggest consulting a doctor for severe concerns."
+        f"You are the PillSync AI Health Copilot advising {user_name} (Role: {user_role}).\n"
+        f"Real-Time Patient Compliance Score: {compliance_score}%\n\n"
+        f"=== ACTIVE MEDICINE CABINET CARDS ===\n{meds_text}\n\n"
+        f"=== 🚨 MEDICAL EMERGENCY INFORMATION CARDS ===\n{emg_text}\n\n"
+        f"INSTRUCTIONS: Provide accurate, precise, detailed answers directly referencing the medicine card details, dosages, intake times, blood group, emergency contacts, or allergies provided above whenever asked. Be helpful, professional, and clear. Do not prescribe illegal drugs."
     )
-    
+
     if GEMINI_API_KEY:
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+            model_path = get_best_flash_model(GEMINI_API_KEY)
+            url = f"https://generativelanguage.googleapis.com/v1beta/{model_path}:generateContent?key={GEMINI_API_KEY}"
             payload = {
                 "contents": [
-                    {"role": "user", "parts": [{"text": f"{system_context}\n\nPatient Query: {message}"}]}
+                    {"role": "user", "parts": [{"text": f"{system_context}\n\nUser Question: {message}"}]}
                 ],
                 "generationConfig": {
-                    "temperature": 0.3,
-                    "maxOutputTokens": 200
+                    "temperature": 0.2,
+                    "maxOutputTokens": 400
                 }
             }
-            res = requests.post(url, json=payload, timeout=5)
+            res = requests.post(url, json=payload, timeout=6)
             if res.status_code == 200:
-                return res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                candidates = res.json().get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts and "text" in parts[0]:
+                        return parts[0]["text"].strip()
         except Exception as e:
-            pass
+            print("[GEMINI CHATBOT ERROR]", e)
 
-    # Simulated AI Fallback
+    # Detailed Fallback Engine
     msg_clean = message.lower()
-    
-    if "side effect" in msg_clean or "effect" in msg_clean:
-        # Side effects query
-        found_med = "your medication"
-        for m in active_medicines:
-            if m.lower() in msg_clean:
-                found_med = m
-                break
-        return (
-            f"Regarding {found_med}, common side effects vary by dose. For typical cardiovascular or pain drugs, "
-            f"mild drowsiness, lightheadedness, or slight nausea can occur. Make sure to take them with water. "
-            f"If you experience any severe symptoms, please notify your healthcare provider immediately."
-        )
-    elif "compliance" in msg_clean or "score" in msg_clean or "miss" in msg_clean:
-        if compliance_score >= 90:
-            return f"Excellent job, {patient_name}! Your compliance rate is {compliance_score}%. Keeping this rhythm is key for treatment efficacy."
-        else:
-            return (
-                f"Your adherence rate is currently at {compliance_score}%. Since it is below 85%, I recommend setting up caregiver alerts or "
-                f"enabling custom SMS/email reminders. Consistency is essential for your therapeutic benefits."
-            )
-    elif "food" in msg_clean or "grapefruit" in msg_clean or "eat" in msg_clean:
-        return (
-            f"Some medicines interact with diet. Statins (like Lipitor/Atorvastatin) should not be taken with large amounts of grapefruit juice, "
-            f"and NSAIDs (like Ibuprofen) should ideally be taken with meals to protect your stomach lining. Let me know which pill you are referring to!"
-        )
-    else:
-        return (
-            f"Hello {patient_name}, I am your PillSync AI Assistant. I see you are scheduled for {meds_str} with a compliance rate of {compliance_score}%. "
-            f"I can help explain side effects, drug interaction warnings, or help optimize your intake timing! What would you like to know?"
-        )
+
+    if any(k in msg_clean for k in ["card", "detail", "medicine", "cabinet", "prescription", "dose", "dosage"]):
+        if medicine_details:
+            lines = [f"📋 **Here are your Active Medicine Card Details:**\n"]
+            for m in medicine_details:
+                lines.append(f"• **{m.get('name')}** — Dosage: `{m.get('dosage')}` | Stock: `{m.get('quantity')} left` | Frequency: `{m.get('times_per_day')}x daily` | Advice: `{m.get('food_relation')}` | Times: `{m.get('custom_times')}`")
+            return "\n".join(lines)
+        return "No active medicine card details were found in the Cabinet."
+
+    if any(k in msg_clean for k in ["emergency", "blood", "contact", "allergy", "doctor", "phone"]):
+        if emergency_details:
+            lines = [f"🚨 **Medical Emergency Information Card Details:**\n"]
+            for e in emergency_details:
+                lines.append(f"• **Patient:** {e.get('patient_name')}")
+                lines.append(f"• **Blood Group:** 🩸 {e.get('blood_group')}")
+                lines.append(f"• **Emergency Contact:** 📞 {e.get('emergency_contact_name')} ({e.get('relationship')}) — {e.get('emergency_contact_phone')}")
+                lines.append(f"• **Allergies:** ⚠️ {e.get('allergies')}")
+                lines.append(f"• **Medical Conditions:** 🏥 {e.get('medical_conditions')}")
+                lines.append(f"• **Doctor:** 🩺 {e.get('doctor_name')} ({e.get('doctor_phone')})")
+            return "\n".join(lines)
+        return "No emergency information card details recorded yet."
+
+    return (
+        f"Hello {user_name}! I am your PillSync AI Copilot. "
+        f"You currently have {len(medicine_details)} active medicine cards and an adherence rate of {compliance_score}%. "
+        f"You can ask me for full medicine card details, dosage instructions, intake timings, emergency contact details, blood group, or allergies!"
+    )
 
 
 def parse_prescription_ocr(file_content: bytes, filename: str) -> Dict:

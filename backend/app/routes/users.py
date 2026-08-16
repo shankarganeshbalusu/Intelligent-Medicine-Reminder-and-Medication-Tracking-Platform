@@ -339,16 +339,109 @@ def chatbot_interaction(
     current_user: models.User = Depends(auth.get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    active_meds = db.query(models.Medicine).filter(models.Medicine.user_id == current_user.id).all()
-    med_names = [m.name for m in active_meds]
-    
+    med_card_details = []
+    emergency_card_details = []
+    patient_context_name = current_user.name
+
+    if current_user.role == "patient":
+        # 1. Active Medicines
+        active_meds = db.query(models.Medicine).filter(
+            models.Medicine.user_id == current_user.id,
+            models.Medicine.is_archived == False
+        ).all()
+        for m in active_meds:
+            med_card_details.append({
+                "name": m.name,
+                "generic_name": m.generic_name or "",
+                "dosage": m.dosage,
+                "quantity": m.quantity,
+                "times_per_day": m.times_per_day,
+                "duration_days": m.duration_days,
+                "food_relation": m.food_relation or "No Preference",
+                "custom_times": m.custom_times or "",
+                "days_of_week": m.days_of_week or "Daily"
+            })
+
+        # 2. Emergency Info Card
+        emg = db.query(models.EmergencyInfo).filter(models.EmergencyInfo.user_id == current_user.id).first()
+        if emg:
+            emergency_card_details.append({
+                "patient_name": current_user.name,
+                "blood_group": emg.blood_group or "Not Specified",
+                "emergency_contact_name": emg.emergency_contact_name or "None",
+                "emergency_contact_phone": emg.emergency_contact_phone or "None",
+                "relationship": emg.contact_relationship or "None",
+                "allergies": emg.allergies or "No Known Allergies",
+                "medical_conditions": emg.medical_conditions or "None Listed",
+                "doctor_name": emg.doctor_name or "None",
+                "doctor_phone": emg.doctor_phone or "None",
+                "important_notes": emg.important_notes or ""
+            })
+
+    elif current_user.role == "caregiver":
+        # Caregiver inspecting assigned patients
+        links = db.query(models.PatientCaregiver).filter(
+            models.PatientCaregiver.caregiver_id == current_user.id,
+            models.PatientCaregiver.status == "active"
+        ).all()
+
+        patient_names = []
+        for l in links:
+            patient = l.patient
+            if patient:
+                patient_names.append(patient.name)
+                # Patient meds
+                p_meds = db.query(models.Medicine).filter(
+                    models.Medicine.user_id == patient.id,
+                    models.Medicine.is_archived == False
+                ).all()
+                for m in p_meds:
+                    med_card_details.append({
+                        "patient_name": patient.name,
+                        "name": m.name,
+                        "generic_name": m.generic_name or "",
+                        "dosage": m.dosage,
+                        "quantity": m.quantity,
+                        "times_per_day": m.times_per_day,
+                        "duration_days": m.duration_days,
+                        "food_relation": m.food_relation or "No Preference",
+                        "custom_times": m.custom_times or "",
+                        "days_of_week": m.days_of_week or "Daily"
+                    })
+
+                # Patient emergency info
+                p_emg = db.query(models.EmergencyInfo).filter(models.EmergencyInfo.user_id == patient.id).first()
+                if p_emg:
+                    emergency_card_details.append({
+                        "patient_name": patient.name,
+                        "blood_group": p_emg.blood_group or "Not Specified",
+                        "emergency_contact_name": p_emg.emergency_contact_name or "None",
+                        "emergency_contact_phone": p_emg.emergency_contact_phone or "None",
+                        "relationship": p_emg.contact_relationship or "None",
+                        "allergies": p_emg.allergies or "No Known Allergies",
+                        "medical_conditions": p_emg.medical_conditions or "None Listed",
+                        "doctor_name": p_emg.doctor_name or "None",
+                        "doctor_phone": p_emg.doctor_phone or "None",
+                        "important_notes": p_emg.important_notes or ""
+                    })
+
+        patient_context_name = f"Caregiver {current_user.name} (Assigned Patients: {', '.join(patient_names) if patient_names else 'None'})"
+
+    # Compliance Logs
     logs = db.query(models.MedicationLog).filter(models.MedicationLog.user_id == current_user.id).all()
     taken = sum(1 for l in logs if l.status == "taken")
     total = len(logs)
     score = round((taken / total) * 100) if total > 0 else 100
     
     from app.ai_service import get_chatbot_response
-    reply = get_chatbot_response(req.message, current_user.name, med_names, score)
+    reply = get_chatbot_response(
+        message=req.message,
+        user_name=patient_context_name,
+        user_role=current_user.role,
+        medicine_details=med_card_details,
+        emergency_details=emergency_card_details,
+        compliance_score=score
+    )
     return {"reply": reply}
 
 
