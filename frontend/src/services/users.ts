@@ -1,5 +1,5 @@
 import api from './api';
-import { User, Association, ProfileUpdateData, PasswordChangeData } from '../types';
+import { User, Association, ProfileUpdateData, PasswordChangeData, EmergencyInfo } from '../types';
 
 export const usersService = {
   async getMe(): Promise<User> {
@@ -54,6 +54,21 @@ export const usersService = {
 
   async deleteAccount(): Promise<void> {
     await api.delete('/users/me');
+  },
+
+  async getEmergencyInfo(): Promise<EmergencyInfo> {
+    const response = await api.get<EmergencyInfo>('/users/emergency-info');
+    return response.data;
+  },
+
+  async updateEmergencyInfo(data: EmergencyInfo): Promise<EmergencyInfo> {
+    const response = await api.put<EmergencyInfo>('/users/emergency-info', data);
+    return response.data;
+  },
+
+  async getPatientEmergencyInfo(patientId: number): Promise<EmergencyInfo> {
+    const response = await api.get<EmergencyInfo>(`/users/patients/${patientId}/emergency-info`);
+    return response.data;
   }
 };
 

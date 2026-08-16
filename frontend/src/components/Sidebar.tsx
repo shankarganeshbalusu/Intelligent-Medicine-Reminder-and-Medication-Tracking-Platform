@@ -17,6 +17,7 @@ import {
   Settings
 } from 'lucide-react';
 import { authService } from '../services/auth';
+import AdminSidebar from './AdminSidebar';
 
 interface SidebarProps {
   user: any;
@@ -25,6 +26,9 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ user, onLogout, onAskAI }: SidebarProps) {
+  if (user?.role === 'admin') {
+    return <AdminSidebar user={user} onLogout={onLogout} />;
+  }
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);

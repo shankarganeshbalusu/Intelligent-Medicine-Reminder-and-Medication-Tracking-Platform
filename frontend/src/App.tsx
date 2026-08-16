@@ -15,6 +15,18 @@ import Home from './pages/Home';
 import PrescriptionOCR from './pages/PrescriptionOCR';
 import RefillTracker from './pages/RefillTracker';
 import MedicalRecords from './pages/MedicalRecords';
+import AdminProtectedRoute from './components/AdminProtectedRoute';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminPatients from './pages/admin/AdminPatients';
+import AdminCaregivers from './pages/admin/AdminCaregivers';
+import AdminMedicines from './pages/admin/AdminMedicines';
+import AdminActivity from './pages/admin/AdminActivity';
+import AdminRefillTracker from './pages/admin/AdminRefillTracker';
+import AdminMedicalRecords from './pages/admin/AdminMedicalRecords';
+import AdminNotifications from './pages/admin/AdminNotifications';
+import AdminReports from './pages/admin/AdminReports';
+import AdminSettings from './pages/admin/AdminSettings';
+import AdminProfile from './pages/admin/AdminProfile';
 import { authService } from './services/auth';
 import { usersService } from './services/users';
 import {
@@ -196,7 +208,21 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            {/* Fallback route - Always directs to Public Home Landing Page */}
+
+            {/* Admin Dashboard & Management Routes */}
+            <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+            <Route path="/admin/patients" element={<AdminProtectedRoute><AdminPatients /></AdminProtectedRoute>} />
+            <Route path="/admin/caregivers" element={<AdminProtectedRoute><AdminCaregivers /></AdminProtectedRoute>} />
+            <Route path="/admin/medicines" element={<AdminProtectedRoute><AdminMedicines /></AdminProtectedRoute>} />
+            <Route path="/admin/activity" element={<AdminProtectedRoute><AdminActivity /></AdminProtectedRoute>} />
+            <Route path="/admin/refill" element={<AdminProtectedRoute><AdminRefillTracker /></AdminProtectedRoute>} />
+            <Route path="/admin/medical-records" element={<AdminProtectedRoute><AdminMedicalRecords /></AdminProtectedRoute>} />
+            <Route path="/admin/notifications" element={<AdminProtectedRoute><AdminNotifications /></AdminProtectedRoute>} />
+            <Route path="/admin/reports" element={<AdminProtectedRoute><AdminReports /></AdminProtectedRoute>} />
+            <Route path="/admin/settings" element={<AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>} />
+            <Route path="/admin/profile" element={<AdminProtectedRoute><AdminProfile /></AdminProtectedRoute>} />
+
+            {/* Fallback route */}
             <Route 
               path="*" 
               element={<Navigate to="/" replace />} 

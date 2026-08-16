@@ -56,9 +56,13 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setError('');
 
     try {
-      await authService.login({ email, password });
+      const res = await authService.login({ email, password });
       onLoginSuccess();
-      navigate('/dashboard');
+      if (res.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       console.error(err);
       setError(

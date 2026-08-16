@@ -392,3 +392,115 @@ def delete_account(
         )
 
 
+# --- EMERGENCY INFORMATION ENDPOINTS ---
+
+def _build_emergency_response(info: models.EmergencyInfo, user: models.User) -> schemas.EmergencyInfoResponse:
+    if not info:
+        return schemas.EmergencyInfoResponse(
+            user_id=user.id,
+            patient_name=user.name,
+            patient_email=user.email
+        )
+    return schemas.EmergencyInfoResponse(
+        id=info.id,
+        user_id=info.user_id,
+        patient_name=user.name,
+        patient_email=user.email,
+        blood_group=info.blood_group,
+        emergency_contact_name=info.emergency_contact_name,
+        emergency_contact_phone=info.emergency_contact_phone,
+        relationship=info.contact_relationship,
+        allergies=info.allergies,
+        medical_conditions=info.medical_conditions,
+        important_notes=info.important_notes,
+        doctor_name=info.doctor_name,
+        doctor_phone=info.doctor_phone,
+        updated_at=info.updated_at
+    )
+
+
+@router.get("/emergency-info", response_model=schemas.EmergencyInfoResponse)
+def get_own_emergency_info(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    info = db.query(models.EmergencyInfo).filter(models.EmergencyInfo.user_id == current_user.id).first()
+    return _build_emergency_response(info, current_user)
+
+
+@router.put("/emergency-info", response_model=schemas.EmergencyInfoResponse)
+def update_own_emergency_info(
+    info_in: schemas.EmergencyInfoCreate,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    info = db.query(models.EmergencyInfo).filter(models.EmergencyInfo.user_id == current_user.id).first()
+    if not info:
+        info = models.EmergencyInfo(
+            user_id=current_user.id,
+            blood_group=info_in.blood_group,
+            emergency_contact_name=info_in.emergency_contact_name,
+            emergency_contact_phone=info_in.emergency_contact_phone,
+            contact_relationship=info_in.relationship,
+            allergies=info_in.allergies,
+            medical_conditions=info_in.medical_conditions,
+            important_notes=info_in.important_notes,
+            doctor_name=info_in.doctor_name,
+            doctor_phone=info_in.doctor_phone
+        )
+        db.add(info)
+    else:
+        if info_in.blood_group is not None: info.blood_group = info_in.blood_group
+        if info_in.emergency_contact_name is not None: info.emergency_contact_name = info_in.emergency_contact_name
+        if info_in.emergency_contact_phone is not None: info.emergency_contact_phone = info_in.emergency_contact_phone
+        if info_in.relationship is not None: info.contact_relationship = info_in.relationship
+        if info_in.allergies is not None: info.allergies = info_in.allergies
+        if info_in.medical_conditions is not None: info.medical_conditions = info_in.medical_conditions
+        if info_in.important_notes is not None: info.important_notes = info_in.important_notes
+        if info_in.doctor_name is not None: info.doctor_name = info_in.doctor_name
+        if info_in.doctor_phone is not None: info.doctor_phone = info_in.doctor_phone
+        info.updated_at = datetime.datetime.utcnow()
+    
+    db.commit()
+    db.refresh(info)
+    return _build_emergency_response(info, current_user)
+
+
+@router.get("/patients/{patient_id}/emergency-info", response_model=schemas.EmergencyInfoResponse)
+def get_patient_emergency_info(
+    patient_id: int,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    # 1. Permission Check
+    if current_user.id == patient_id:
+        pass  # Patient accessing own record
+    elif current_user.role == "admin":
+        pass  # Admin access
+    elif current_user.role == "caregiver":
+        link = db.query(models.PatientCaregiver).filter(
+            models.PatientCaregiver.patient_id == patient_id,
+            models.PatientCaregiver.caregiver_id == current_user.id,
+            models.PatientCaregiver.status == "active"
+        ).first()
+        if not link:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: You do not have permission to view emergency info for this patient."
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied."
+        )
+
+    patient = db.query(models.User).filter(models.User.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient record not found")
+
+    info = db.query(models.EmergencyInfo).filter(models.EmergencyInfo.user_id == patient_id).first()
+    return _build_emergency_response(info, patient)
+
+
+
+

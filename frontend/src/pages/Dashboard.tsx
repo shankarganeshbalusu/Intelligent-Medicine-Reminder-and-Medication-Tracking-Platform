@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { User, Association, Medicine, Reminder, MedicationLog } from '../types';
+import { User, Association, Medicine, Reminder, MedicationLog, EmergencyInfo } from '../types';
 import { usersService } from '../services/users';
 import { medicinesService } from '../services/medicines';
 import { authService } from '../services/auth';
+import { MedicalEmergencyInfoCard } from '../components/MedicalEmergencyInfoCard';
+import { EditEmergencyInfoModal } from '../components/EditEmergencyInfoModal';
 import {
   Activity,
   Pill,
@@ -42,6 +44,10 @@ export default function Dashboard() {
   const [patients, setPatients] = useState<Association[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<number | ''>('');
   
+  // Emergency Info State
+  const [emergencyInfo, setEmergencyInfo] = useState<EmergencyInfo | null>(null);
+  const [showEditEmergencyModal, setShowEditEmergencyModal] = useState(false);
+
   // Stats & Schedule data
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -64,11 +70,12 @@ export default function Dashboard() {
 
   const fetchPatientData = async (uid: number) => {
     try {
-      const [activeMeds, todayRems, historyLogs, interactionData] = await Promise.all([
+      const [activeMeds, todayRems, historyLogs, interactionData, emgData] = await Promise.all([
         medicinesService.getMedicines(uid).catch(() => []),
         medicinesService.getTodayReminders(uid).catch(() => []),
         medicinesService.getMedicationLogs(uid).catch(() => []),
-        isPatient ? medicinesService.checkDrugInteractions().catch(() => ({ warnings: [] })) : Promise.resolve({ warnings: [] })
+        isPatient ? medicinesService.checkDrugInteractions().catch(() => ({ warnings: [] })) : Promise.resolve({ warnings: [] }),
+        isPatient ? usersService.getEmergencyInfo().catch(() => null) : usersService.getPatientEmergencyInfo(uid).catch(() => null)
       ]);
 
       setMedicines(activeMeds);
@@ -76,6 +83,7 @@ export default function Dashboard() {
       setLogs(historyLogs);
       calculateCompliance(historyLogs);
       setWarnings(interactionData.warnings || []);
+      setEmergencyInfo(emgData);
     } catch (err) {
       console.error('Failed to fetch patient data', err);
     }
@@ -388,6 +396,16 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* 🚨 Medical Emergency Information Card */}
+          <div className="my-6">
+            <MedicalEmergencyInfoCard
+              emergencyInfo={emergencyInfo}
+              currentMedications={medicines}
+              isEditable={isPatient}
+              onEdit={() => setShowEditEmergencyModal(true)}
+            />
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Checklist Column */}
             <div className="lg:col-span-2 card-3d-premium rounded-3xl p-6 border-cyan-500/20 space-y-6">
@@ -545,6 +563,13 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          {showEditEmergencyModal && (
+            <EditEmergencyInfoModal
+              initialInfo={emergencyInfo}
+              onClose={() => setShowEditEmergencyModal(false)}
+              onSaveSuccess={(updated) => setEmergencyInfo(updated)}
+            />
+          )}
         </>
       )}
     </div>

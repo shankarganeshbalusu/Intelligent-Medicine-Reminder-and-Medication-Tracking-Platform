@@ -132,5 +132,167 @@ export interface GoogleAuthData {
   role?: string;
 }
 
+export interface AdminStats {
+  total_users: number;
+  total_patients: number;
+  total_caregivers: number;
+  total_medicines: number;
+  active_medicines: number;
+  completed_treatments: number;
+  discontinued_medicines: number;
+  low_stock_medicines: number;
+}
+
+export interface PatientListItem {
+  id: number;
+  name: string;
+  email: string;
+  notification_email?: string;
+  is_verified: boolean;
+  assigned_caregiver?: string;
+  medicine_count: number;
+  created_at?: string;
+  last_activity?: string;
+}
+
+export interface PatientDetail {
+  id: number;
+  name: string;
+  email: string;
+  notification_email?: string;
+  is_verified: boolean;
+  created_at?: string;
+  adherence_score: number;
+  total_logged_doses: number;
+  caregivers: Array<{
+    link_id: number;
+    caregiver_id: number;
+    caregiver_name: string;
+    caregiver_email: string;
+    status: string;
+  }>;
+  active_medicines: Array<Medicine>;
+  archived_medicines: Array<{
+    id: number;
+    name: string;
+    dosage: string;
+    discontinue_reason?: string;
+    created_at?: string;
+  }>;
+  recent_logs: Array<{
+    id: number;
+    medicine_name: string;
+    dosage: string;
+    status: string;
+    logged_at?: string;
+  }>;
+}
+
+export interface CaregiverListItem {
+  id: number;
+  name: string;
+  email: string;
+  notification_email?: string;
+  is_verified: boolean;
+  assigned_patients_count: number;
+  assigned_patient_names: string[];
+  created_at?: string;
+}
+
+export interface AdminMedicineItem {
+  id: number;
+  name: string;
+  generic_name?: string;
+  patient_name: string;
+  patient_id: number;
+  dosage: string;
+  quantity: number;
+  times_per_day: number;
+  custom_times?: string;
+  status: string;
+  is_archived: boolean;
+  discontinue_reason?: string;
+  days_left: number;
+  is_low_stock: boolean;
+  start_date?: string;
+  duration_days: number;
+  food_relation?: string;
+}
+
+export interface AdminActivityItem {
+  id: string;
+  user_name: string;
+  user_email: string;
+  event_type: string;
+  action: string;
+  status: string;
+  timestamp: string;
+}
+
+export interface AdminRefillItem {
+  medicine_id: number;
+  medicine_name: string;
+  patient_name: string;
+  patient_email: string;
+  notification_email?: string;
+  current_stock: number;
+  times_per_day: number;
+  days_left: number;
+  refill_status: string;
+  is_critical: boolean;
+  start_date?: string;
+}
+
+export interface AdminNotificationItem {
+  id: string;
+  recipient_role: 'patient' | 'caregiver';
+  recipient_name: string;
+  recipient_email: string;
+  medicine_name: string;
+  dose_time: string;
+  scheduled_date: string;
+  notification_type: string;
+  status: string;
+  routing_rule: string;
+}
+
+export interface AdminReportsData {
+  role_distribution: Array<{ name: string; value: number }>;
+  medication_status_distribution: Array<{ name: string; value: number }>;
+  adherence_metrics: {
+    overall_adherence_percentage: number;
+    taken_doses: number;
+    missed_doses: number;
+    total_doses_logged: number;
+  };
+}
+
+export interface AuditLogItem {
+  id: number;
+  performer_name: string;
+  action: string;
+  event_type: string;
+  target?: string;
+  details?: string;
+  timestamp?: string;
+}
+
+export interface EmergencyInfo {
+  id?: number;
+  user_id?: number;
+  patient_name?: string;
+  patient_email?: string;
+  blood_group?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  relationship?: string;
+  allergies?: string;
+  medical_conditions?: string;
+  important_notes?: string;
+  doctor_name?: string;
+  doctor_phone?: string;
+  updated_at?: string;
+}
+
 
 

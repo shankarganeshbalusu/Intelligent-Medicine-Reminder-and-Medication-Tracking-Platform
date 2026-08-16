@@ -105,7 +105,7 @@ def login(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
             detail="Incorrect password"
         )
     
-    if not user.is_verified:
+    if not user.is_verified and user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Please verify your email address before logging in. A verification link was sent to your email."

@@ -198,3 +198,30 @@ class InteractionWarning(BaseModel):
 
 class InteractionCheckResponse(BaseModel):
     warnings: List[InteractionWarning]
+
+
+# Emergency Info Schemas
+class EmergencyInfoBase(BaseModel):
+    blood_group: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    relationship: Optional[str] = None
+    allergies: Optional[str] = None
+    medical_conditions: Optional[str] = None
+    important_notes: Optional[str] = None
+    doctor_name: Optional[str] = None
+    doctor_phone: Optional[str] = None
+
+class EmergencyInfoCreate(EmergencyInfoBase):
+    pass
+
+class EmergencyInfoResponse(EmergencyInfoBase):
+    id: Optional[int] = None
+    user_id: Optional[int] = None
+    patient_name: Optional[str] = None
+    patient_email: Optional[str] = None
+    updated_at: Optional[datetime.datetime] = None
+
+    class Config:
+        from_attributes = True
+

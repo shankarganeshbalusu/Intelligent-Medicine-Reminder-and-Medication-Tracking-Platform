@@ -127,3 +127,40 @@ class PasswordResetToken(Base):
     token = Column(String, unique=True, index=True, nullable=False)
     expires_at = Column(DateTime, nullable=False)
 
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    action = Column(String, nullable=False)
+    event_type = Column(String, nullable=False)  # auth, medicine, user, caregiver, system
+    target = Column(String, nullable=True)
+    details = Column(Text, nullable=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+    # Relationships
+    user = relationship("User")
+
+
+class EmergencyInfo(Base):
+    __tablename__ = "emergency_info"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    blood_group = Column(String, nullable=True)
+    emergency_contact_name = Column(String, nullable=True)
+    emergency_contact_phone = Column(String, nullable=True)
+    contact_relationship = Column("relationship", String, nullable=True)
+    allergies = Column(Text, nullable=True)
+    medical_conditions = Column(Text, nullable=True)
+    important_notes = Column(Text, nullable=True)
+    doctor_name = Column(String, nullable=True)
+    doctor_phone = Column(String, nullable=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    # Relationship
+    user_rel = relationship("User", backref="emergency_info")
+
+
+
